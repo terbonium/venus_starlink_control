@@ -284,6 +284,21 @@ start_service() {
     fi
 }
 
+# Install GUI v1 pages (classic interface)
+install_gui_v1() {
+    echo_info "Checking for GUI v1 (classic interface)..."
+
+    if [ -d "/opt/victronenergy/gui/qml" ]; then
+        echo_info "GUI v1 found, installing pages..."
+        chmod +x "${APP_DIR}/gui-v1/install-gui-v1.sh"
+        "${APP_DIR}/gui-v1/install-gui-v1.sh" || {
+            echo_warn "GUI v1 installation had issues, continuing..."
+        }
+    else
+        echo_info "GUI v1 not found (normal for newer devices)"
+    fi
+}
+
 # Main installation
 main() {
     echo ""
@@ -297,6 +312,7 @@ main() {
     generate_protos
     create_config
     compile_gui_plugin
+    install_gui_v1
     setup_service
     setup_web_service
     enable_app
@@ -316,8 +332,9 @@ main() {
     echo "Access the web dashboard at:"
     echo "  http://<device-ip>:8088"
     echo ""
-    echo "Local display (if available):"
-    echo "  Settings -> Integrations -> Starlink"
+    echo "Local display:"
+    echo "  GUI v1 (classic): Settings -> Starlink"
+    echo "  GUI v2 (new):     Settings -> Integrations -> Starlink"
     echo ""
     echo "Service management:"
     echo "  D-Bus service:"

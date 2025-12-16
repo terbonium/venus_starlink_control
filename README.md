@@ -1,6 +1,6 @@
 # Venus Starlink Control
 
-A VenusOS GUI-v2 plugin for monitoring and controlling Starlink satellite dishes.
+A VenusOS plugin for monitoring and controlling Starlink satellite dishes. Supports GUI v1 (classic), GUI v2 (new), and web browser access.
 
 ## Features
 
@@ -8,6 +8,15 @@ A VenusOS GUI-v2 plugin for monitoring and controlling Starlink satellite dishes
   - Works from any device on the network (phone, tablet, computer)
   - Auto-updating display (2-second refresh)
   - Mobile-friendly responsive design
+
+- **GUI v1 Support** (Classic interface): Settings -> Starlink
+  - Works with older VenusOS devices and CCGX
+  - Integrated into Settings menu
+  - Survives firmware updates via rc.local
+
+- **GUI v2 Support** (New interface): Settings -> Integrations -> Starlink
+  - For devices with local display running GUI v2
+  - Plugin-based architecture
 
 - **Status Monitoring**: View real-time Starlink dish statistics including:
   - Connection state and uptime
@@ -125,11 +134,14 @@ starlink-control/
 │   ├── starlink_web_server.py    # Web server for browser access
 │   ├── index.html                # Dashboard HTML/CSS/JS
 │   └── run                       # daemontools run script
+├── gui-v1/
+│   ├── PageStarlink.qml          # GUI v1 settings page
+│   └── install-gui-v1.sh         # GUI v1 installer
 ├── gui-v2/
 │   └── plugin.json               # Generated plugin manifest
 └── gui-v2-source/
-    ├── PageStarlinkSettings.qml  # Main settings page
-    └── PageStarlinkStatus.qml    # Detailed status page
+    ├── PageStarlinkSettings.qml  # GUI v2 settings page
+    └── PageStarlinkStatus.qml    # GUI v2 detailed status page
 ```
 
 ## D-Bus Interface
