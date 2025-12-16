@@ -102,9 +102,17 @@ compile_gui_plugin() {
 
     COMPILER="/opt/victronenergy/gui-v2/gui-v2-plugin-compiler.py"
 
+    # Check if lupdate is available (required by the compiler)
+    if ! command -v lupdate &> /dev/null; then
+        echo_warn "lupdate not found, creating plugin.json manually"
+        create_plugin_json_manually
+        return 0
+    fi
+
     if [ ! -f "${COMPILER}" ]; then
         echo_warn "GUI-v2 plugin compiler not found at ${COMPILER}"
-        echo_warn "Skipping GUI plugin compilation"
+        echo_warn "Creating plugin.json manually"
+        create_plugin_json_manually
         return 0
     fi
 
@@ -116,11 +124,37 @@ compile_gui_plugin() {
         --name "${APP_NAME}" \
         --min-required-version "v3.70" \
         --settings "PageStarlinkSettings.qml:Starlink" || {
-            echo_error "Failed to compile GUI plugin"
-            return 1
+            echo_warn "Compiler failed, creating plugin.json manually"
+            create_plugin_json_manually
+            return 0
         }
 
     echo_info "GUI plugin compiled successfully"
+}
+
+# Create plugin.json manually when compiler is not available
+create_plugin_json_manually() {
+    echo_info "Creating plugin.json manually..."
+
+    mkdir -p "${APP_DIR}/gui-v2"
+
+    cat > "${APP_DIR}/gui-v2/plugin.json" << 'EOF'
+{
+    "name": "starlink-control",
+    "minRequiredVersion": "v3.70",
+    "settings": [
+        {
+            "qml": "PageStarlinkSettings.qml",
+            "label": "Starlink"
+        }
+    ]
+}
+EOF
+
+    # Copy QML files to gui-v2 directory (some setups need them there)
+    cp "${APP_DIR}/gui-v2-source/"*.qml "${APP_DIR}/gui-v2/" 2>/dev/null || true
+
+    echo_info "plugin.json created at ${APP_DIR}/gui-v2/plugin.json"
 }
 
 # Setup daemontools service
