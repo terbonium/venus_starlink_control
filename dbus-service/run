@@ -5,8 +5,15 @@
 
 exec 2>&1
 
-# Change to app directory
-APP_DIR=/data/apps/enabled/starlink-control
+# Determine the app directory from this script's location
+# When symlinked from /service/starlink-dbus/run, follow the symlink
+SCRIPT_PATH="$(readlink -f "$0")"
+APP_DIR="$(dirname "$(dirname "${SCRIPT_PATH}")")"
+
+# Fallback if readlink fails
+if [ ! -d "${APP_DIR}/dbus-service" ]; then
+    APP_DIR=/data/apps/enabled/starlink-control
+fi
 
 # Add generated protobuf modules to Python path
 export PYTHONPATH="${APP_DIR}/dbus-service:${PYTHONPATH}"

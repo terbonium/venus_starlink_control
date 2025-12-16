@@ -8,9 +8,12 @@
 
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Configuration
 APP_NAME="starlink-control"
-APP_DIR="/data/apps/available/${APP_NAME}"
+APP_DIR="${SCRIPT_DIR}"
 ENABLED_DIR="/data/apps/enabled"
 SERVICE_DIR="/service/starlink-dbus"
 
