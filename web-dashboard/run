@@ -1,0 +1,29 @@
+#!/bin/sh
+#
+# daemontools run script for starlink-web service
+#
+
+exec 2>&1
+
+# Determine the app directory from this script's location
+SCRIPT_PATH="$(readlink -f "$0")"
+APP_DIR="$(dirname "$(dirname "${SCRIPT_PATH}")")"
+
+# Fallback if readlink fails
+if [ ! -d "${APP_DIR}/web-dashboard" ]; then
+    APP_DIR=/data/apps/enabled/starlink-control
+fi
+
+# Configuration file location
+CONFIG_FILE="${APP_DIR}/config/starlink.conf"
+
+# Default settings
+WEB_PORT=8088
+
+# Read configuration if available
+if [ -f "${CONFIG_FILE}" ]; then
+    . "${CONFIG_FILE}"
+fi
+
+# Run the web server
+exec /usr/bin/python3 "${APP_DIR}/web-dashboard/starlink_web_server.py" --port "${WEB_PORT}"

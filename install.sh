@@ -16,6 +16,7 @@ APP_NAME="starlink-control"
 APP_DIR="${SCRIPT_DIR}"
 ENABLED_DIR="/data/apps/enabled"
 SERVICE_DIR="/service/starlink-dbus"
+WEB_SERVICE_DIR="/service/starlink-web"
 
 # Colors for output
 RED='\033[0;31m'
@@ -216,11 +217,40 @@ DEBUG=0
 
 # Enable mock mode for testing without dish (0 or 1)
 MOCK_MODE=0
+
+# Web dashboard port
+WEB_PORT=8088
 EOF
         echo_info "Default configuration created at ${CONFIG_DIR}/starlink.conf"
     else
         echo_info "Configuration file already exists, skipping"
     fi
+}
+
+# Setup web dashboard service
+setup_web_service() {
+    echo_info "Setting up web dashboard service..."
+
+    # Create service directory
+    mkdir -p "${WEB_SERVICE_DIR}"
+
+    # Create run script symlink
+    ln -sf "${APP_DIR}/web-dashboard/run" "${WEB_SERVICE_DIR}/run"
+
+    # Make run script executable
+    chmod +x "${APP_DIR}/web-dashboard/run"
+
+    # Create log directory
+    mkdir -p "${WEB_SERVICE_DIR}/log"
+
+    # Create log run script
+    cat > "${WEB_SERVICE_DIR}/log/run" << 'EOF'
+#!/bin/sh
+exec svlogd -tt ./main
+EOF
+    chmod +x "${WEB_SERVICE_DIR}/log/run"
+
+    echo_info "Web dashboard service configured"
 }
 
 # Start the service
@@ -234,12 +264,23 @@ start_service() {
 
         # Check if service is running
         if svstat "${SERVICE_DIR}" 2>/dev/null | grep -q "up"; then
-            echo_info "Service started successfully"
+            echo_info "D-Bus service started successfully"
         else
-            echo_warn "Service may not have started. Check logs at ${SERVICE_DIR}/log/main/"
+            echo_warn "D-Bus service may not have started. Check logs at ${SERVICE_DIR}/log/main/"
+        fi
+
+        # Start web service
+        echo_info "Starting web dashboard service..."
+        svc -u "${WEB_SERVICE_DIR}" 2>/dev/null || true
+        sleep 2
+
+        if svstat "${WEB_SERVICE_DIR}" 2>/dev/null | grep -q "up"; then
+            echo_info "Web dashboard started successfully"
+        else
+            echo_warn "Web dashboard may not have started. Check logs at ${WEB_SERVICE_DIR}/log/main/"
         fi
     else
-        echo_warn "svc command not found, please start the service manually"
+        echo_warn "svc command not found, please start the services manually"
     fi
 }
 
@@ -257,6 +298,7 @@ main() {
     create_config
     compile_gui_plugin
     setup_service
+    setup_web_service
     enable_app
     start_service
 
@@ -268,16 +310,27 @@ main() {
     echo "The Starlink plugin has been installed."
     echo ""
     echo "Configuration file: ${APP_DIR}/config/starlink.conf"
-    echo "Service logs: ${SERVICE_DIR}/log/main/"
+    echo "D-Bus service logs: ${SERVICE_DIR}/log/main/"
+    echo "Web dashboard logs: ${WEB_SERVICE_DIR}/log/main/"
     echo ""
-    echo "To access the plugin:"
+    echo "Access the web dashboard at:"
+    echo "  http://<device-ip>:8088"
+    echo ""
+    echo "Local display (if available):"
     echo "  Settings -> Integrations -> Starlink"
     echo ""
     echo "Service management:"
-    echo "  Start:   svc -u ${SERVICE_DIR}"
-    echo "  Stop:    svc -d ${SERVICE_DIR}"
-    echo "  Restart: svc -t ${SERVICE_DIR}"
-    echo "  Status:  svstat ${SERVICE_DIR}"
+    echo "  D-Bus service:"
+    echo "    Start:   svc -u ${SERVICE_DIR}"
+    echo "    Stop:    svc -d ${SERVICE_DIR}"
+    echo "    Restart: svc -t ${SERVICE_DIR}"
+    echo "    Status:  svstat ${SERVICE_DIR}"
+    echo ""
+    echo "  Web dashboard:"
+    echo "    Start:   svc -u ${WEB_SERVICE_DIR}"
+    echo "    Stop:    svc -d ${WEB_SERVICE_DIR}"
+    echo "    Restart: svc -t ${WEB_SERVICE_DIR}"
+    echo "    Status:  svstat ${WEB_SERVICE_DIR}"
     echo ""
 }
 

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlink Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --card-bg: #16213e;
+            --text-color: #eee;
+            --text-muted: #888;
+            --accent: #00d4ff;
+            --success: #00ff88;
+            --warning: #ffaa00;
+            --danger: #ff4444;
+            --border: #2a3f5f;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+
+        .header .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+
+        .status-dot.connected {
+            background: var(--success);
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .card h2 {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .stat-value.large {
+            font-size: 2rem;
+            color: var(--accent);
+        }
+
+        .throughput-display {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .throughput-item {
+            text-align: center;
+        }
+
+        .throughput-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+
+        .throughput-value.download {
+            color: var(--success);
+        }
+
+        .throughput-value.upload {
+            color: var(--accent);
+        }
+
+        .throughput-label {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .throughput-unit {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        .alert-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .alert-badge.ok {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--success);
+        }
+
+        .alert-badge.warning {
+            background: rgba(255, 170, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .alert-badge.danger {
+            background: rgba(255, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-stow {
+            background: var(--warning);
+            color: #000;
+        }
+
+        .btn-unstow {
+            background: var(--success);
+            color: #000;
+        }
+
+        .btn-reboot {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .gps-map {
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .gps-coords {
+            font-family: monospace;
+            font-size: 1.2rem;
+            color: var(--accent);
+        }
+
+        .compass {
+            width: 100px;
+            height: 100px;
+            margin: 20px auto;
+            position: relative;
+            border: 3px solid var(--border);
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--card-bg) 0%, var(--bg-color) 100%);
+        }
+
+        .compass-needle {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            width: 4px;
+            height: 40px;
+            background: linear-gradient(to bottom, var(--danger) 50%, #fff 50%);
+            transform-origin: bottom center;
+            margin-left: -2px;
+            border-radius: 2px;
+        }
+
+        .compass-label {
+            position: absolute;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .compass-label.n { top: 2px; left: 50%; transform: translateX(-50%); }
+        .compass-label.s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+        .compass-label.e { right: 2px; top: 50%; transform: translateY(-50%); }
+        .compass-label.w { left: 2px; top: 50%; transform: translateY(-50%); }
+
+        .heading-value {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-top: 10px;
+        }
+
+        .state-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .state-connected { background: rgba(0, 255, 136, 0.2); color: var(--success); }
+        .state-searching { background: rgba(0, 212, 255, 0.2); color: var(--accent); }
+        .state-stowed { background: rgba(255, 170, 0, 0.2); color: var(--warning); }
+        .state-error { background: rgba(255, 68, 68, 0.2); color: var(--danger); }
+
+        .last-update {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 20px;
+        }
+
+        .error-message {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .throughput-value { font-size: 1.8rem; }
+            .card { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Starlink Dashboard</h1>
+        <div class="status-indicator">
+            <span class="status-dot" id="connectionDot"></span>
+            <span id="connectionText">Connecting...</span>
+        </div>
+    </div>
+
+    <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+    <div class="dashboard">
+        <!-- Status Card -->
+        <div class="card">
+            <h2>Status</h2>
+            <div style="text-align: center; margin: 20px 0;">
+                <span id="stateText" class="state-badge state-searching">Unknown</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Uptime</span>
+                <span class="stat-value" id="uptime">--</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Boot Count</span>
+                <span class="stat-value" id="bootcount">--</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Country</span>
+                <span class="stat-value" id="countryCode">--</span>
+            </div>
+        </div>
+
+        <!-- Throughput Card -->
+        <div class="card">
+            <h2>Throughput</h2>
+            <div class="throughput-display">
+                <div class="throughput-item">
+                    <div class="throughput-value download" id="downloadSpeed">--</div>
+                    <div class="throughput-label">Download <span class="throughput-unit">Mbps</span></div>
+                </div>
+                <div class="throughput-item">
+                    <div class="throughput-value upload" id="uploadSpeed">--</div>
+                    <div class="throughput-label">Upload <span class="throughput-unit">Mbps</span></div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Latency</span>
+                <span class="stat-value" id="latency">-- ms</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Packet Loss</span>
+                <span class="stat-value" id="packetLoss">--%</span>
+            </div>
+        </div>
+
+        <!-- Obstruction Card -->
+        <div class="card">
+            <h2>Obstruction</h2>
+            <div class="stat-row">
+                <span class="stat-label">Currently Obstructed</span>
+                <span id="obstructedBadge" class="alert-badge ok">Clear</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Time Obstructed</span>
+                <span class="stat-value" id="obstructedPercent">--%</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Sky Blocked</span>
+                <span class="stat-value" id="fractionObstructed">--%</span>
+            </div>
+        </div>
+
+        <!-- GPS Card -->
+        <div class="card">
+            <h2>GPS Location</h2>
+            <div class="stat-row">
+                <span class="stat-label">GPS Fix</span>
+                <span id="gpsBadge" class="alert-badge warning">No Fix</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Satellites</span>
+                <span class="stat-value" id="gpsSatellites">--</span>
+            </div>
+            <div class="gps-map">
+                <div class="gps-coords" id="gpsCoords">---, ---</div>
+                <div style="color: var(--text-muted); font-size: 0.8rem; margin-top: 5px;">
+                    Altitude: <span id="altitude">--</span> m
+                </div>
+            </div>
+        </div>
+
+        <!-- Heading/Attitude Card -->
+        <div class="card">
+            <h2>Orientation</h2>
+            <div class="compass">
+                <span class="compass-label n">N</span>
+                <span class="compass-label s">S</span>
+                <span class="compass-label e">E</span>
+                <span class="compass-label w">W</span>
+                <div class="compass-needle" id="compassNeedle"></div>
+            </div>
+            <div class="heading-value"><span id="heading">--</span>&deg;</div>
+            <div class="stat-row">
+                <span class="stat-label">Tilt</span>
+                <span class="stat-value" id="tilt">--&deg;</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Roll</span>
+                <span class="stat-value" id="roll">--&deg;</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Speed</span>
+                <span class="stat-value" id="speed">-- kts</span>
+            </div>
+        </div>
+
+        <!-- Alerts Card -->
+        <div class="card">
+            <h2>Alerts</h2>
+            <div class="stat-row">
+                <span class="stat-label">Thermal Throttle</span>
+                <span id="alertThermalThrottle" class="alert-badge ok">OK</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Thermal Shutdown</span>
+                <span id="alertThermalShutdown" class="alert-badge ok">OK</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Motors Stuck</span>
+                <span id="alertMotorsStuck" class="alert-badge ok">OK</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Mast Not Vertical</span>
+                <span id="alertMastNotVertical" class="alert-badge ok">OK</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Slow Ethernet</span>
+                <span id="alertSlowEthernet" class="alert-badge ok">OK</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Roaming</span>
+                <span id="alertRoaming" class="alert-badge ok">OK</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Heating</span>
+                <span id="alertIsHeating" class="alert-badge ok">OK</span>
+            </div>
+        </div>
+
+        <!-- Device Info Card -->
+        <div class="card">
+            <h2>Device Info</h2>
+            <div class="stat-row">
+                <span class="stat-label">Device ID</span>
+                <span class="stat-value" id="deviceId" style="font-size: 0.8rem; word-break: break-all;">--</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Hardware</span>
+                <span class="stat-value" id="hardwareVersion">--</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Software</span>
+                <span class="stat-value" id="softwareVersion" style="font-size: 0.9rem;">--</span>
+            </div>
+        </div>
+
+        <!-- Controls Card -->
+        <div class="card">
+            <h2>Controls</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px;">
+                Use these controls to manage your Starlink dish.
+            </p>
+            <div class="controls">
+                <button class="btn btn-stow" id="btnStow" onclick="sendCommand(2)">Stow</button>
+                <button class="btn btn-unstow" id="btnUnstow" onclick="sendCommand(3)">Unstow</button>
+                <button class="btn btn-reboot" id="btnReboot" onclick="confirmReboot()">Reboot</button>
+            </div>
+            <div id="commandStatus" style="text-align: center; margin-top: 15px; font-size: 0.9rem;"></div>
+        </div>
+    </div>
+
+    <div class="last-update">
+        Last updated: <span id="lastUpdate">--</span>
+    </div>
+
+    <script>
+        const UPDATE_INTERVAL = 2000; // 2 seconds
+        let updateTimer = null;
+
+        function formatUptime(seconds) {
+            if (!seconds || seconds <= 0) return '--';
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            if (days > 0) return `${days}d ${hours}h ${mins}m`;
+            if (hours > 0) return `${hours}h ${mins}m`;
+            return `${mins}m`;
+        }
+
+        function formatCoords(lat, lon) {
+            if (lat === null || lon === null || lat === 0 && lon === 0) return '---, ---';
+            const latDir = lat >= 0 ? 'N' : 'S';
+            const lonDir = lon >= 0 ? 'E' : 'W';
+            return `${Math.abs(lat).toFixed(5)}&deg;${latDir}, ${Math.abs(lon).toFixed(5)}&deg;${lonDir}`;
+        }
+
+        function mpsToKnots(mps) {
+            return (mps * 1.94384).toFixed(1);
+        }
+
+        function setAlertBadge(elementId, isAlert) {
+            const el = document.getElementById(elementId);
+            if (isAlert) {
+                el.className = 'alert-badge danger';
+                el.textContent = 'ALERT';
+            } else {
+                el.className = 'alert-badge ok';
+                el.textContent = 'OK';
+            }
+        }
+
+        function getStateClass(state) {
+            switch (state) {
+                case 1: return 'state-connected';
+                case 4: return 'state-stowed';
+                case 2:
+                case 3: return 'state-searching';
+                default: return 'state-error';
+            }
+        }
+
+        async function fetchStatus() {
+            try {
+                const response = await fetch('/api/status');
+                if (!response.ok) throw new Error('Failed to fetch status');
+                const data = await response.json();
+                updateDashboard(data);
+                document.getElementById('errorMessage').style.display = 'none';
+            } catch (error) {
+                console.error('Error fetching status:', error);
+                document.getElementById('errorMessage').textContent =
+                    'Unable to connect to Starlink D-Bus service. Is the service running?';
+                document.getElementById('errorMessage').style.display = 'block';
+                document.getElementById('connectionDot').classList.remove('connected');
+                document.getElementById('connectionText').textContent = 'Service Unavailable';
+            }
+        }
+
+        function updateDashboard(data) {
+            // Connection status
+            const isConnected = data.connected === 1;
+            document.getElementById('connectionDot').classList.toggle('connected', isConnected);
+            document.getElementById('connectionText').textContent = isConnected ? 'Connected' : 'Disconnected';
+
+            // State
+            const stateEl = document.getElementById('stateText');
+            stateEl.textContent = data.stateText || 'Unknown';
+            stateEl.className = 'state-badge ' + getStateClass(data.state);
+
+            // Basic stats
+            document.getElementById('uptime').textContent = formatUptime(data.uptime);
+            document.getElementById('bootcount').textContent = data.bootcount ?? '--';
+            document.getElementById('countryCode').textContent = data.countryCode || '--';
+
+            // Throughput
+            document.getElementById('downloadSpeed').textContent =
+                data.downlinkThroughput != null ? data.downlinkThroughput.toFixed(1) : '--';
+            document.getElementById('uploadSpeed').textContent =
+                data.uplinkThroughput != null ? data.uplinkThroughput.toFixed(1) : '--';
+            document.getElementById('latency').textContent =
+                data.popPingLatencyMs != null ? data.popPingLatencyMs.toFixed(0) + ' ms' : '-- ms';
+            document.getElementById('packetLoss').textContent =
+                data.popPingDropRate != null ? (data.popPingDropRate * 100).toFixed(1) + '%' : '--%';
+
+            // Obstruction
+            const obstructedBadge = document.getElementById('obstructedBadge');
+            if (data.obstructed) {
+                obstructedBadge.className = 'alert-badge danger';
+                obstructedBadge.textContent = 'Obstructed';
+            } else {
+                obstructedBadge.className = 'alert-badge ok';
+                obstructedBadge.textContent = 'Clear';
+            }
+            document.getElementById('obstructedPercent').textContent =
+                data.obstructedPercent != null ? data.obstructedPercent.toFixed(1) + '%' : '--%';
+            document.getElementById('fractionObstructed').textContent =
+                data.fractionObstructed != null ? (data.fractionObstructed * 100).toFixed(2) + '%' : '--%';
+
+            // GPS
+            const gpsBadge = document.getElementById('gpsBadge');
+            if (data.gpsValid) {
+                gpsBadge.className = 'alert-badge ok';
+                gpsBadge.textContent = 'Valid';
+            } else {
+                gpsBadge.className = 'alert-badge warning';
+                gpsBadge.textContent = 'No Fix';
+            }
+            document.getElementById('gpsSatellites').textContent = data.gpsSatellites ?? '--';
+            document.getElementById('gpsCoords').innerHTML = formatCoords(data.latitude, data.longitude);
+            document.getElementById('altitude').textContent =
+                data.altitude != null ? data.altitude.toFixed(1) : '--';
+
+            // Heading/Attitude
+            const heading = data.heading ?? 0;
+            document.getElementById('heading').textContent = heading.toFixed(0);
+            document.getElementById('compassNeedle').style.transform = `rotate(${heading}deg)`;
+            document.getElementById('tilt').textContent =
+                data.tilt != null ? data.tilt.toFixed(1) + '\u00B0' : '--\u00B0';
+            document.getElementById('roll').textContent =
+                data.roll != null ? data.roll.toFixed(1) + '\u00B0' : '--\u00B0';
+            document.getElementById('speed').textContent =
+                data.speed != null ? mpsToKnots(data.speed) + ' kts' : '-- kts';
+
+            // Alerts
+            setAlertBadge('alertThermalThrottle', data.alertThermalThrottle);
+            setAlertBadge('alertThermalShutdown', data.alertThermalShutdown);
+            setAlertBadge('alertMotorsStuck', data.alertMotorsStuck);
+            setAlertBadge('alertMastNotVertical', data.alertMastNotVertical);
+            setAlertBadge('alertSlowEthernet', data.alertSlowEthernet);
+            setAlertBadge('alertRoaming', data.alertRoaming);
+            setAlertBadge('alertIsHeating', data.alertIsHeating);
+
+            // Device info
+            document.getElementById('deviceId').textContent = data.deviceId || '--';
+            document.getElementById('hardwareVersion').textContent = data.hardwareVersion || '--';
+            document.getElementById('softwareVersion').textContent = data.softwareVersion || '--';
+
+            // Last update
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+
+        async function sendCommand(cmd) {
+            const statusEl = document.getElementById('commandStatus');
+            const cmdNames = { 1: 'Reboot', 2: 'Stow', 3: 'Unstow' };
+
+            try {
+                // Disable buttons
+                document.getElementById('btnStow').disabled = true;
+                document.getElementById('btnUnstow').disabled = true;
+                document.getElementById('btnReboot').disabled = true;
+
+                statusEl.textContent = `Sending ${cmdNames[cmd]} command...`;
+                statusEl.style.color = 'var(--accent)';
+
+                const response = await fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    statusEl.textContent = `${cmdNames[cmd]} command sent successfully`;
+                    statusEl.style.color = 'var(--success)';
+                } else {
+                    statusEl.textContent = `${cmdNames[cmd]} command failed: ${result.error || 'Unknown error'}`;
+                    statusEl.style.color = 'var(--danger)';
+                }
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.style.color = 'var(--danger)';
+            } finally {
+                // Re-enable buttons after 2 seconds
+                setTimeout(() => {
+                    document.getElementById('btnStow').disabled = false;
+                    document.getElementById('btnUnstow').disabled = false;
+                    document.getElementById('btnReboot').disabled = false;
+                }, 2000);
+
+                // Clear status after 5 seconds
+                setTimeout(() => {
+                    statusEl.textContent = '';
+                }, 5000);
+            }
+        }
+
+        function confirmReboot() {
+            if (confirm('Are you sure you want to reboot the Starlink dish? This will cause a temporary loss of connectivity.')) {
+                sendCommand(1);
+            }
+        }
+
+        // Start auto-update
+        function startUpdates() {
+            fetchStatus();
+            updateTimer = setInterval(fetchStatus, UPDATE_INTERVAL);
+        }
+
+        // Stop when page is hidden to save resources
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(updateTimer);
+            } else {
+                startUpdates();
+            }
+        });
+
+        // Initial fetch
+        startUpdates();
+    </script>
+</body>
+</html>

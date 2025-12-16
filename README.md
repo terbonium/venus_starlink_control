@@ -4,6 +4,11 @@ A VenusOS GUI-v2 plugin for monitoring and controlling Starlink satellite dishes
 
 ## Features
 
+- **Web Dashboard**: Browser-accessible dashboard at `http://<device-ip>:8088`
+  - Works from any device on the network (phone, tablet, computer)
+  - Auto-updating display (2-second refresh)
+  - Mobile-friendly responsive design
+
 - **Status Monitoring**: View real-time Starlink dish statistics including:
   - Connection state and uptime
   - Signal quality (SNR)
@@ -21,19 +26,23 @@ A VenusOS GUI-v2 plugin for monitoring and controlling Starlink satellite dishes
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     VenusOS GX Device                        │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐       ┌──────────────────────────┐    │
-│  │   GUI-v2 Plugin │◄─────►│  D-Bus (com.victronenergy│    │
-│  │   (QML Pages)   │       │  .starlink)              │    │
-│  └─────────────────┘       └────────────┬─────────────┘    │
-│                                         │                   │
-│                            ┌────────────▼─────────────┐    │
-│                            │  starlink-dbus-service   │    │
-│                            │  (Python gRPC Client)    │    │
-│                            └────────────┬─────────────┘    │
-└─────────────────────────────────────────┼───────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                       VenusOS GX Device                          │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────┐       ┌──────────────────────────┐         │
+│  │   GUI-v2 Plugin │◄─────►│  D-Bus (com.victronenergy│         │
+│  │   (QML Pages)   │       │  .starlink)              │         │
+│  │ [Local Display] │       └────────────┬─────────────┘         │
+│  └─────────────────┘                    │                       │
+│                                         │                       │
+│  ┌─────────────────┐       ┌────────────▼─────────────┐         │
+│  │  Web Dashboard  │◄─────►│  starlink-dbus-service   │         │
+│  │  (port 8088)    │       │  (Python gRPC Client)    │         │
+│  │ [Browser Access]│       └────────────┬─────────────┘         │
+│  └─────────────────┘                    │                       │
+│                                         │                       │
+└─────────────────────────────────────────┼───────────────────────┘
                                           │ gRPC (port 9200)
                               ┌───────────▼───────────┐
                               │   Starlink Dish       │
@@ -112,6 +121,10 @@ starlink-control/
 │   ├── starlink_dbus_service.py  # Main D-Bus service
 │   ├── starlink_grpc_client.py   # gRPC client for Starlink
 │   └── run                       # daemontools run script
+├── web-dashboard/
+│   ├── starlink_web_server.py    # Web server for browser access
+│   ├── index.html                # Dashboard HTML/CSS/JS
+│   └── run                       # daemontools run script
 ├── gui-v2/
 │   └── plugin.json               # Generated plugin manifest
 └── gui-v2-source/
@@ -189,6 +202,28 @@ The service exposes data on `com.victronenergy.starlink`:
 |------|------|-------------|
 | `/Command` | int | Write to issue commands (1=Reboot, 2=Stow, 3=Unstow) |
 | `/CommandResult` | int | Result of last command (0=None, 1=Success, 2=Failed) |
+
+## Web Dashboard API
+
+The web dashboard exposes a REST API for integration:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Dashboard HTML page |
+| `/api/status` | GET | JSON object with all Starlink status data |
+| `/api/command` | POST | Send command to dish (JSON body: `{"command": 1\|2\|3}`) |
+
+Command values: 1=Reboot, 2=Stow, 3=Unstow
+
+Example:
+```bash
+# Get status
+curl http://<device-ip>:8088/api/status
+
+# Stow the dish
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"command": 2}' http://<device-ip>:8088/api/command
+```
 
 ## License
 
