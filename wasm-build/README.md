@@ -65,7 +65,7 @@ output/
 ## Build Time
 
 The first build will take **30-60 minutes** as it needs to:
-- Download and install Qt 6.8.3 (~2GB)
+- Download and install Qt 6.7.2 (~2GB)
 - Download and install Emscripten
 - Build the QtMqtt module
 - Compile gui-v2 to WASM

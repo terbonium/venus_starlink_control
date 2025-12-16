@@ -15,8 +15,9 @@ LABEL description="Build environment for Venus OS GUI v2 WASM"
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Qt and Emscripten versions (match Venus OS requirements)
-ENV QT_VERSION=6.8.3
+# Qt and Emscripten versions
+# Using Qt 6.7.2 which is well-supported by aqt
+ENV QT_VERSION=6.7.2
 ENV EMSDK_VERSION=3.1.56
 ENV QT_PATH=/opt/qt
 ENV EMSDK_PATH=/opt/emsdk
@@ -69,15 +70,17 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install aqtinstall for Qt installation
 RUN pip install --no-cache-dir aqtinstall
 
-# Install Qt for desktop (needed for some build tools)
-RUN aqt install-qt linux desktop ${QT_VERSION} gcc_64 \
-    --outputdir ${QT_PATH} \
-    -m qtshadertools qtwebsockets
+# List available Qt versions and architectures for debugging (optional)
+# RUN aqt list-qt linux desktop && aqt list-qt linux desktop --arch ${QT_VERSION}
+
+# Install Qt for desktop (needed for host tools)
+# Note: qtshadertools and qtwebsockets are included in base install for 6.7.x
+RUN aqt install-qt linux desktop ${QT_VERSION} linux_gcc_64 \
+    --outputdir ${QT_PATH}
 
 # Install Qt for WebAssembly (single-threaded)
 RUN aqt install-qt linux desktop ${QT_VERSION} wasm_singlethread \
-    --outputdir ${QT_PATH} \
-    -m qtshadertools qtwebsockets
+    --outputdir ${QT_PATH}
 
 # Set Qt environment variables
 ENV QT_HOST_PATH=${QT_PATH}/${QT_VERSION}/gcc_64
@@ -106,7 +109,7 @@ RUN cd /build && \
     git clone --depth 1 --branch v${QT_VERSION} https://github.com/qt/qtmqtt.git && \
     cd qtmqtt && \
     mkdir build-wasm && cd build-wasm && \
-    source ${EMSDK_PATH}/emsdk_env.sh && \
+    . ${EMSDK_PATH}/emsdk_env.sh && \
     ${QT_WASM_PATH}/bin/qt-cmake .. \
         -DCMAKE_BUILD_TYPE=MinSizeRel \
         -DQT_HOST_PATH=${QT_HOST_PATH} \

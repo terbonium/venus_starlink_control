@@ -22,7 +22,7 @@ OUTPUT_DIR="${BUILD_DIR}/output"
 PATCHES_DIR="${BUILD_DIR}/patches"
 
 # Qt paths
-QT_VERSION="${QT_VERSION:-6.8.3}"
+QT_VERSION="${QT_VERSION:-6.7.2}"
 QT_PATH="${QT_PATH:-/opt/qt}"
 QT_HOST_PATH="${QT_HOST_PATH:-${QT_PATH}/${QT_VERSION}/gcc_64}"
 QT_WASM_PATH="${QT_WASM_PATH:-${QT_PATH}/${QT_VERSION}/wasm_singlethread}"
