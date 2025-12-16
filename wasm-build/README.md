@@ -17,7 +17,7 @@ This directory contains everything needed to build a custom Venus OS GUI v2 WASM
 ```
 
 This will:
-1. Build a Docker image with Qt 6.8.3, Emscripten 3.1.56, and all dependencies
+1. Build a Docker image with Qt 6.5.3 LTS, Emscripten 3.1.37, and all dependencies
 2. Clone the official gui-v2 repository
 3. Apply Starlink patches and QML pages
 4. Compile the WASM binary
@@ -65,7 +65,7 @@ output/
 ## Build Time
 
 The first build will take **30-60 minutes** as it needs to:
-- Download and install Qt 6.7.2 (~2GB)
+- Download and install Qt 6.5.3 LTS (~2GB)
 - Download and install Emscripten
 - Build the QtMqtt module
 - Compile gui-v2 to WASM
@@ -86,8 +86,10 @@ Create patch files in `patches/` directory. Patches are applied automatically du
 
 Edit the `Dockerfile` and update:
 ```dockerfile
-ENV QT_VERSION=6.8.3
-ENV EMSDK_VERSION=3.1.56
+# Note: Qt and Emscripten versions must be compatible
+# See Qt documentation for supported emsdk versions
+ENV QT_VERSION=6.5.3
+# Then update the base image tag in FROM emscripten/emsdk:X.X.XX
 ```
 
 ## Deployment Details
@@ -152,9 +154,9 @@ ssh root@<cerbo-ip> "svstat /service/starlink-dbus"
 ┌─────────────────────────────────────────────────────────┐
 │                    Docker Container                      │
 ├─────────────────────────────────────────────────────────┤
-│  Ubuntu 24.04                                           │
-│  ├── Qt 6.8.3 (desktop + wasm_singlethread)            │
-│  ├── Emscripten 3.1.56                                 │
+│  emscripten/emsdk:3.1.37 (based on Ubuntu)             │
+│  ├── Qt 6.5.3 LTS (desktop + wasm_singlethread)        │
+│  ├── Emscripten 3.1.37                                 │
 │  ├── QtMqtt module                                      │
 │  └── gui-v2 source + Starlink patches                  │
 ├─────────────────────────────────────────────────────────┤

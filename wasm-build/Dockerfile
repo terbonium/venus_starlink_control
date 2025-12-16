@@ -6,8 +6,12 @@
 #
 # Based on: https://github.com/victronenergy/gui-v2/wiki/How-to-build-venus-gui-v2
 #
+# Uses official Emscripten Docker image to avoid tar extraction issues
+#
 
-FROM ubuntu:24.04
+# Use official Emscripten SDK image as base
+# Qt 6.5.3 was built with emsdk 3.1.37
+FROM emscripten/emsdk:3.1.37
 
 LABEL maintainer="Starlink Control Plugin"
 LABEL description="Build environment for Venus OS GUI v2 WASM"
@@ -15,14 +19,12 @@ LABEL description="Build environment for Venus OS GUI v2 WASM"
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Qt and Emscripten versions
-# Qt 6.5.3 LTS has stable WASM support via aqt
+# Qt version - must match emsdk version compatibility
+# Qt 6.5.3 LTS has stable WASM support via aqt and works with emsdk 3.1.37
 ENV QT_VERSION=6.5.3
-ENV EMSDK_VERSION=3.1.37
 ENV QT_PATH=/opt/qt
-ENV EMSDK_PATH=/opt/emsdk
 
-# Install base dependencies including Node.js (for Emscripten)
+# Install additional dependencies for Qt
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -35,8 +37,6 @@ RUN apt-get update && apt-get install -y \
     curl \
     p7zip-full \
     xz-utils \
-    nodejs \
-    npm \
     libgl1-mesa-dev \
     libxkbcommon-dev \
     libxkbcommon-x11-0 \
@@ -91,33 +91,10 @@ ENV QT_HOST_PATH=${QT_PATH}/${QT_VERSION}/gcc_64
 ENV QT_WASM_PATH=${QT_PATH}/${QT_VERSION}/wasm_singlethread
 ENV PATH="${QT_HOST_PATH}/bin:${PATH}"
 
-# Tell Emscripten to use system Node.js
-ENV EMSDK_NODE=/usr/bin/node
-ENV EM_NODE_JS=/usr/bin/node
-ENV NODE=/usr/bin/node
-
-# Install Emscripten (version must be compatible with Qt WASM build)
-# Qt 6.5.x was built with emsdk 3.1.37
-# We install in stages to work around Docker tar issues with node download
-RUN git clone https://github.com/emscripten-core/emsdk.git ${EMSDK_PATH}
-
-# Create a fake node directory to skip node download, then install emscripten
-RUN cd ${EMSDK_PATH} && \
-    mkdir -p node/22.16.0_64bit/bin && \
-    ln -s /usr/bin/node node/22.16.0_64bit/bin/node && \
-    ln -s /usr/bin/npm node/22.16.0_64bit/bin/npm && \
-    ln -s /usr/bin/npx node/22.16.0_64bit/bin/npx && \
-    echo "22.16.0" > node/22.16.0_64bit/.emsdk_version && \
-    ./emsdk install ${EMSDK_VERSION} && \
-    ./emsdk activate ${EMSDK_VERSION}
-
-# Ensure .emscripten uses system node
-RUN sed -i "s|NODE_JS.*|NODE_JS = '/usr/bin/node'|" ${EMSDK_PATH}/.emscripten || true
-
-# Set Emscripten environment
-ENV EMSDK=${EMSDK_PATH}
-ENV EM_CONFIG=${EMSDK_PATH}/.emscripten
-ENV PATH="${EMSDK_PATH}:${EMSDK_PATH}/upstream/emscripten:${PATH}"
+# Emscripten is already set up from base image at /emsdk
+# Just ensure environment is properly configured
+ENV EMSDK=/emsdk
+ENV EM_CONFIG=/emsdk/.emscripten
 
 # Create working directory
 WORKDIR /build
@@ -130,7 +107,7 @@ RUN cd /build && \
     git clone --depth 1 --branch v${QT_VERSION} https://github.com/qt/qtmqtt.git && \
     cd qtmqtt && \
     mkdir build-wasm && cd build-wasm && \
-    . ${EMSDK_PATH}/emsdk_env.sh && \
+    . ${EMSDK}/emsdk_env.sh && \
     ${QT_WASM_PATH}/bin/qt-cmake .. \
         -DCMAKE_BUILD_TYPE=MinSizeRel \
         -DQT_HOST_PATH=${QT_HOST_PATH} \

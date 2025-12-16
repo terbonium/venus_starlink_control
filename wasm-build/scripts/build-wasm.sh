@@ -26,7 +26,7 @@ QT_VERSION="${QT_VERSION:-6.5.3}"
 QT_PATH="${QT_PATH:-/opt/qt}"
 QT_HOST_PATH="${QT_HOST_PATH:-${QT_PATH}/${QT_VERSION}/gcc_64}"
 QT_WASM_PATH="${QT_WASM_PATH:-${QT_PATH}/${QT_VERSION}/wasm_singlethread}"
-EMSDK_PATH="${EMSDK_PATH:-/opt/emsdk}"
+EMSDK_PATH="${EMSDK:-/emsdk}"
 
 echo ""
 echo "=========================================="
