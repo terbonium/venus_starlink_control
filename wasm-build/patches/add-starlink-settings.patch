@@ -1,0 +1,29 @@
+diff --git a/pages/settings/PageSettings.qml b/pages/settings/PageSettings.qml
+--- a/pages/settings/PageSettings.qml
++++ b/pages/settings/PageSettings.qml
+@@ -1,5 +1,6 @@
+ /*
+  * PageSettings.qml
++ * Modified to include Starlink satellite dish integration
+  */
+
+ import QtQuick
+@@ -50,6 +51,17 @@ Page {
+                 onClicked: Global.pageManager.pushPage("/pages/settings/PageSettingsGeneral.qml")
+             }
+
++            // Starlink Integration
++            ListNavigationItem {
++                text: qsTr("Starlink")
++                visible: starlinkConnected.value !== undefined
++                onClicked: Global.pageManager.pushPage("/pages/settings/PageSettingsStarlink.qml")
++
++                VeQuickItem {
++                    id: starlinkConnected
++                    uid: Global.system.serviceUid + "/com.victronenergy.starlink/Connected"
++                }
++            }
++
+             ListNavigationItem {
+                 text: qsTr("Firmware")
+                 secondaryText: FirmwareManager.state === FirmwareManager.DownloadingAndInstalling
