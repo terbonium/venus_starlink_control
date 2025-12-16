@@ -22,7 +22,7 @@ ENV EMSDK_VERSION=3.1.37
 ENV QT_PATH=/opt/qt
 ENV EMSDK_PATH=/opt/emsdk
 
-# Install base dependencies
+# Install base dependencies including Node.js (for Emscripten)
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -34,6 +34,9 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl \
     p7zip-full \
+    xz-utils \
+    nodejs \
+    npm \
     libgl1-mesa-dev \
     libxkbcommon-dev \
     libxkbcommon-x11-0 \
@@ -88,11 +91,14 @@ ENV QT_HOST_PATH=${QT_PATH}/${QT_VERSION}/gcc_64
 ENV QT_WASM_PATH=${QT_PATH}/${QT_VERSION}/wasm_singlethread
 ENV PATH="${QT_HOST_PATH}/bin:${PATH}"
 
+# Tell Emscripten to use system Node.js
+ENV EMSDK_NODE=/usr/bin/node
+
 # Install Emscripten (version must be compatible with Qt WASM build)
 # Qt 6.5.x was built with emsdk 3.1.37
 RUN git clone https://github.com/emscripten-core/emsdk.git ${EMSDK_PATH} \
     && cd ${EMSDK_PATH} \
-    && ./emsdk install ${EMSDK_VERSION} \
+    && ./emsdk install ${EMSDK_VERSION} --shallow \
     && ./emsdk activate ${EMSDK_VERSION}
 
 # Set Emscripten environment
