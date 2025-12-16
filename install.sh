@@ -111,10 +111,11 @@ compile_gui_plugin() {
     cd "${APP_DIR}"
 
     # Compile the settings page for the Integrations menu
+    # Format: --settings "QmlFile.qml:MenuLabel"
     python3 "${COMPILER}" \
         --name "${APP_NAME}" \
         --min-required-version "v3.70" \
-        --settings PageStarlinkSettings.qml 'Starlink' || {
+        --settings "PageStarlinkSettings.qml:Starlink" || {
             echo_error "Failed to compile GUI plugin"
             return 1
         }
