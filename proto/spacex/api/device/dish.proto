@@ -1,0 +1,192 @@
+// Starlink Dish Protocol Buffer Definitions
+// Dish-specific messages for status and control
+
+syntax = "proto3";
+
+package SpaceX.API.Device;
+
+option python_package = "spacex.api.device";
+
+import "spacex/api/device/common.proto";
+
+// Dish stow request
+message DishStowRequest {
+    bool unstow = 1;
+}
+
+// Dish stow response
+message DishStowResponse {}
+
+// Dish get status request
+message DishGetStatusRequest {}
+
+// Dish get status response
+message DishGetStatusResponse {
+    DeviceInfo device_info = 1;
+    DishState device_state = 2;
+    DishOutage outage = 3;
+    DishGpsStats gps_stats = 4;
+    float seconds_to_first_nonempty_slot = 5;
+    DishAlerts alerts = 6;
+    float obstruction_stats_last_update_time = 7;
+    DishObstructionStats obstruction_stats = 8;
+    float downlink_throughput_bps = 9;
+    float uplink_throughput_bps = 10;
+    float pop_ping_latency_ms = 11;
+    float pop_ping_drop_rate = 12;
+    float percent_obstructed = 13;
+    float seconds_obstructed = 14;
+    bool boresight_azimuth_deg = 1002;
+    bool boresight_elevation_deg = 1003;
+    EthSpeedMbps eth_speed_mbps = 1004;
+    DishMobilityClass mobility_class = 1006;
+    bool is_snr_above_noise_floor = 1007;
+    DishReadyStates ready_states = 1011;
+    float class_of_service = 1016;
+    float software_update_state = 1017;
+    bool is_snr_persistently_low = 1019;
+    bool has_actuators = 1023;
+    DishDisablementCode disablement_code = 1024;
+    bool has_signed_cals = 1026;
+}
+
+// Dish state enumeration
+message DishState {
+    State state = 1;
+}
+
+enum State {
+    UNKNOWN = 0;
+    CONNECTED = 1;
+    BOOTING = 2;
+    SEARCHING = 3;
+    STOWED = 4;
+    THERMAL_SHUTDOWN = 5;
+    NO_SATS = 6;
+    OBSTRUCTED = 7;
+    NO_DOWNLINK = 8;
+    NO_PINGS = 9;
+    DISABLED = 10;
+    FAULTED = 11;
+    CABLE_TEST = 12;
+    ACTUATOR_MOTOR_STOPPED = 13;
+    MOVING_FAST = 14;
+    TOO_FAR_FROM_SERVICE_ADDRESS = 15;
+    NO_ACTIVE_ACCOUNT = 16;
+    SLEEPING = 17;
+    MOVING_WHILE_NOT_MOBILE = 18;
+}
+
+// Dish outage information
+message DishOutage {
+    Cause cause = 1;
+    int64 start_timestamp_ns = 2;
+    uint64 duration_ns = 3;
+    bool did_switch = 4;
+}
+
+enum Cause {
+    CAUSE_UNKNOWN = 0;
+    CAUSE_BOOTING = 1;
+    CAUSE_STOWED = 2;
+    CAUSE_THERMAL_SHUTDOWN = 3;
+    CAUSE_NO_SCHEDULE = 4;
+    CAUSE_NO_SATS = 5;
+    CAUSE_OBSTRUCTED = 6;
+    CAUSE_NO_DOWNLINK = 7;
+    CAUSE_NO_PINGS = 8;
+    CAUSE_ACTUATOR_ACTIVITY = 9;
+    CAUSE_CABLE_TEST = 10;
+    CAUSE_SLEEPING = 11;
+    CAUSE_MOVING_WHILE_NOT_ALLOWED = 12;
+}
+
+// Dish GPS statistics
+message DishGpsStats {
+    bool gps_valid = 1;
+    uint32 gps_sats = 2;
+    bool no_sats_after_ttff = 3;
+    bool inhibit_gps = 4;
+}
+
+// Dish alerts
+message DishAlerts {
+    bool motors_stuck = 1;
+    bool thermal_throttle = 2;
+    bool thermal_shutdown = 3;
+    bool mast_not_near_vertical = 4;
+    bool unexpected_location = 5;
+    bool slow_ethernet_speeds = 6;
+    bool roaming = 7;
+    bool install_pending = 8;
+    bool is_heating = 9;
+    bool power_supply_thermal_throttle = 10;
+    bool is_power_save_idle = 11;
+    bool moving_while_not_mobile = 12;
+    bool moving_fast_while_not_aviation = 13;
+    bool dbf_telem_stale = 14;
+    bool low_motor_current = 15;
+    bool moving_too_fast_for_policy = 16;
+    bool actuator_motor_stopped = 17;
+}
+
+// Dish obstruction statistics
+message DishObstructionStats {
+    bool currently_obstructed = 1;
+    float fraction_obstructed = 2;
+    float time_obstructed = 3;
+    repeated float patches_valid = 4;
+    float avg_prolonged_obstruction_duration_s = 5;
+    float avg_prolonged_obstruction_interval_s = 6;
+    bool avg_prolonged_obstruction_valid = 7;
+}
+
+// Ethernet speed
+enum EthSpeedMbps {
+    ETH_SPEED_UNKNOWN = 0;
+    ETH_SPEED_10 = 1;
+    ETH_SPEED_100 = 2;
+    ETH_SPEED_1000 = 3;
+    ETH_SPEED_2500 = 4;
+}
+
+// Mobility class
+enum DishMobilityClass {
+    MOBILITY_CLASS_UNKNOWN = 0;
+    MOBILITY_CLASS_STATIONARY = 1;
+    MOBILITY_CLASS_NOMADIC = 2;
+    MOBILITY_CLASS_MOBILE = 3;
+    MOBILITY_CLASS_HIGH_PERFORMANCE = 4;
+}
+
+// Ready states
+message DishReadyStates {
+    bool cady = 1;
+    bool scp = 2;
+    bool l1l2 = 3;
+    bool xphy = 4;
+    bool aap = 5;
+    bool rf = 6;
+}
+
+// Disablement code
+enum DishDisablementCode {
+    DISABLEMENT_CODE_UNKNOWN = 0;
+    DISABLEMENT_CODE_OKAY = 1;
+    DISABLEMENT_CODE_NO_ACTIVE_ACCOUNT = 2;
+    DISABLEMENT_CODE_TOO_FAR_FROM_SERVICE_ADDRESS = 3;
+    DISABLEMENT_CODE_IN_OCEAN = 4;
+    DISABLEMENT_CODE_INVALID_COUNTRY = 5;
+    DISABLEMENT_CODE_BLOCKED_COUNTRY = 6;
+    DISABLEMENT_CODE_DATA_OVERAGE_SANDBOX_POLICY = 7;
+}
+
+// Dish obstruction map request
+message DishGetObstructionMapRequest {}
+
+// Dish obstruction map response
+message DishGetObstructionMapResponse {
+    uint32 num_rows = 1;
+    uint32 num_cols = 2;
+    repeated float snr = 3;
+}

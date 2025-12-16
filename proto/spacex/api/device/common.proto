@@ -1,0 +1,43 @@
+// Starlink Common Protocol Buffer Definitions
+// Based on reverse-engineered Starlink API
+
+syntax = "proto3";
+
+package SpaceX.API.Device;
+
+option python_package = "spacex.api.device";
+
+// Device information common to all Starlink devices
+message DeviceInfo {
+    string id = 1;
+    string hardware_version = 2;
+    string software_version = 3;
+    string manufactured_version = 4;
+    int64 generation_number = 5;
+    string country_code = 6;
+    int32 utc_offset_s = 7;
+    bool software_partitions_equal = 8;
+    bool is_dev = 9;
+    int32 bootcount = 10;
+    int32 anti_rollback_version = 11;
+    bool is_hitl = 12;
+    string boot_reason = 1001;
+}
+
+// Device state enumeration
+enum DeviceState {
+    UNKNOWN = 0;
+    ONLINE = 1;
+    BOOTING = 2;
+    SEARCHING = 3;
+    CONNECTED = 4;
+}
+
+// Boot info
+message BootInfo {
+    int32 count_by_reason_map_size = 1;
+    map<string, int32> count_by_reason = 2;
+    map<int32, int32> count_by_reason_delta = 3;
+    int32 last_reason = 4;
+    int32 last_count = 5;
+}

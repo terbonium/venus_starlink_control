@@ -1,0 +1,77 @@
+// Starlink Device Protocol Buffer Definitions
+// Main device request/response messages
+
+syntax = "proto3";
+
+package SpaceX.API.Device;
+
+option python_package = "spacex.api.device";
+
+import "spacex/api/device/common.proto";
+import "spacex/api/device/dish.proto";
+
+// Main request message to the Starlink device
+message Request {
+    uint64 id = 1;
+    string target_id = 13;
+    int64 epoch_id = 14;
+
+    oneof request {
+        GetStatusRequest get_status = 2;
+        GetDeviceInfoRequest get_device_info = 4;
+        RebootRequest reboot = 6;
+        DishStowRequest dish_stow = 8;
+        DishGetStatusRequest dish_get_status = 1005;
+        DishGetObstructionMapRequest dish_get_obstruction_map = 1015;
+    }
+}
+
+// Main response message from the Starlink device
+message Response {
+    uint64 id = 1;
+    ResponseStatus status = 2;
+    uint64 api_version = 3;
+
+    oneof response {
+        GetStatusResponse get_status = 1001;
+        GetDeviceInfoResponse get_device_info = 1004;
+        DishStowResponse dish_stow = 1008;
+        DishGetStatusResponse dish_get_status = 1005;
+        DishGetObstructionMapResponse dish_get_obstruction_map = 1015;
+    }
+}
+
+// Response status codes
+enum ResponseStatus {
+    STATUS_OK = 0;
+    STATUS_ERROR = 1;
+    STATUS_INVALID_REQUEST = 2;
+    STATUS_NOT_FOUND = 3;
+    STATUS_NOT_SUPPORTED = 4;
+}
+
+// Get general status request
+message GetStatusRequest {}
+
+// Get general status response
+message GetStatusResponse {
+    DeviceInfo device_info = 1;
+    DeviceState device_state = 2;
+}
+
+// Get device info request
+message GetDeviceInfoRequest {}
+
+// Get device info response
+message GetDeviceInfoResponse {
+    DeviceInfo device_info = 1;
+}
+
+// Reboot request
+message RebootRequest {}
+
+// gRPC Service definition
+service Device {
+    rpc Handle(Request) returns (Response);
+    rpc Stream(stream Request) returns (stream Response);
+}

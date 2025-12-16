@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# daemontools run script for starlink-dbus service
+#
+
+exec 2>&1
+
+# Change to app directory
+APP_DIR=/data/apps/enabled/starlink-control
+
+# Add generated protobuf modules to Python path
+export PYTHONPATH="${APP_DIR}/dbus-service:${PYTHONPATH}"
+
+# Configuration file location
+CONFIG_FILE="${APP_DIR}/config/starlink.conf"
+
+# Default settings
+DISH_ADDRESS="192.168.100.1:9200"
+UPDATE_INTERVAL=5000
+DEBUG=""
+
+# Read configuration if available
+if [ -f "${CONFIG_FILE}" ]; then
+    . "${CONFIG_FILE}"
+fi
+
+# Build command line arguments
+ARGS="--address ${DISH_ADDRESS} --interval ${UPDATE_INTERVAL}"
+
+if [ -n "${DEBUG}" ] && [ "${DEBUG}" = "1" ]; then
+    ARGS="${ARGS} --debug"
+fi
+
+# Use mock mode if configured (for testing without dish)
+if [ -n "${MOCK_MODE}" ] && [ "${MOCK_MODE}" = "1" ]; then
+    ARGS="${ARGS} --mock"
+fi
+
+# Run the service
+exec /usr/bin/python3 "${APP_DIR}/dbus-service/starlink_dbus_service.py" ${ARGS}
