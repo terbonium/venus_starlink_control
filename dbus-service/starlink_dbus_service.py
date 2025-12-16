@@ -154,6 +154,21 @@ class StarlinkDbusService:
         # Software version
         self._dbusservice.add_path('/SoftwareVersion', '')
 
+        # GPS data
+        self._dbusservice.add_path('/Gps/Valid', 0)
+        self._dbusservice.add_path('/Gps/Satellites', 0)
+        self._dbusservice.add_path('/Gps/Latitude', 0.0)
+        self._dbusservice.add_path('/Gps/Longitude', 0.0)
+        self._dbusservice.add_path('/Gps/Altitude', 0.0)
+
+        # Attitude/orientation data
+        self._dbusservice.add_path('/Attitude/Tilt', 0.0)
+        self._dbusservice.add_path('/Attitude/Azimuth', 0.0)
+        self._dbusservice.add_path('/Attitude/Elevation', 0.0)
+        self._dbusservice.add_path('/Attitude/Heading', 0.0)
+        self._dbusservice.add_path('/Attitude/Speed', 0.0)
+        self._dbusservice.add_path('/Attitude/Roll', 0.0)
+
         # Command path (writable) - write values to trigger commands
         self._dbusservice.add_path(
             '/Command',
@@ -275,6 +290,21 @@ class StarlinkDbusService:
         self._dbusservice['/Uptime'] = status.get('uptime_s', 0)
         self._dbusservice['/Bootcount'] = status.get('bootcount', 0)
         self._dbusservice['/CountryCode'] = status.get('country_code', '')
+
+        # Update GPS data
+        self._dbusservice['/Gps/Valid'] = 1 if status.get('gps_valid', False) else 0
+        self._dbusservice['/Gps/Satellites'] = status.get('gps_sats', 0)
+        self._dbusservice['/Gps/Latitude'] = round(status.get('latitude', 0.0), 6)
+        self._dbusservice['/Gps/Longitude'] = round(status.get('longitude', 0.0), 6)
+        self._dbusservice['/Gps/Altitude'] = round(status.get('altitude_m', 0.0), 1)
+
+        # Update attitude/orientation data
+        self._dbusservice['/Attitude/Tilt'] = round(status.get('tilt_angle_deg', 0.0), 2)
+        self._dbusservice['/Attitude/Azimuth'] = round(status.get('boresight_azimuth_deg', 0.0), 1)
+        self._dbusservice['/Attitude/Elevation'] = round(status.get('boresight_elevation_deg', 0.0), 1)
+        self._dbusservice['/Attitude/Heading'] = round(status.get('heading_deg', 0.0), 1)
+        self._dbusservice['/Attitude/Speed'] = round(status.get('speed_mps', 0.0), 2)
+        self._dbusservice['/Attitude/Roll'] = round(status.get('roll_deg', 0.0), 2)
 
         return True  # Continue periodic updates
 

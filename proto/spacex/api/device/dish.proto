@@ -36,8 +36,10 @@ message DishGetStatusResponse {
     float pop_ping_drop_rate = 12;
     float percent_obstructed = 13;
     float seconds_obstructed = 14;
-    bool boresight_azimuth_deg = 1002;
-    bool boresight_elevation_deg = 1003;
+    // Attitude/orientation data
+    float tilt_angle_deg = 15;
+    float boresight_azimuth_deg = 1002;
+    float boresight_elevation_deg = 1003;
     EthSpeedMbps eth_speed_mbps = 1004;
     DishMobilityClass mobility_class = 1006;
     bool is_snr_above_noise_floor = 1007;
@@ -48,6 +50,8 @@ message DishGetStatusResponse {
     bool has_actuators = 1023;
     DishDisablementCode disablement_code = 1024;
     bool has_signed_cals = 1026;
+    // Additional attitude data
+    DishAttitude attitude = 1027;
 }
 
 // Dish state enumeration
@@ -107,6 +111,20 @@ message DishGpsStats {
     uint32 gps_sats = 2;
     bool no_sats_after_ttff = 3;
     bool inhibit_gps = 4;
+    // GPS position (available on mobile/roam dishes)
+    double latitude = 5;
+    double longitude = 6;
+    double altitude_m = 7;
+}
+
+// Dish attitude/orientation data
+message DishAttitude {
+    float tilt_angle_deg = 1;        // Tilt from vertical (0 = pointing up)
+    float boresight_azimuth_deg = 2; // Azimuth angle (compass heading dish is pointing)
+    float boresight_elevation_deg = 3; // Elevation angle
+    float roll_deg = 4;              // Roll angle
+    float heading_deg = 5;           // GPS heading (direction of travel for mobile)
+    float speed_mps = 6;             // GPS speed in meters per second
 }
 
 // Dish alerts

@@ -51,6 +51,21 @@ Page {
     readonly property var _heating: VeQuickItem { uid: root.serviceUid + "/Alerts/IsHeating" }
     readonly property var _powerSaveIdle: VeQuickItem { uid: root.serviceUid + "/Alerts/PowerSaveIdle" }
 
+    // GPS data
+    readonly property var _gpsValid: VeQuickItem { uid: root.serviceUid + "/Gps/Valid" }
+    readonly property var _gpsSatellites: VeQuickItem { uid: root.serviceUid + "/Gps/Satellites" }
+    readonly property var _gpsLatitude: VeQuickItem { uid: root.serviceUid + "/Gps/Latitude" }
+    readonly property var _gpsLongitude: VeQuickItem { uid: root.serviceUid + "/Gps/Longitude" }
+    readonly property var _gpsAltitude: VeQuickItem { uid: root.serviceUid + "/Gps/Altitude" }
+
+    // Attitude/orientation data
+    readonly property var _tilt: VeQuickItem { uid: root.serviceUid + "/Attitude/Tilt" }
+    readonly property var _azimuth: VeQuickItem { uid: root.serviceUid + "/Attitude/Azimuth" }
+    readonly property var _elevation: VeQuickItem { uid: root.serviceUid + "/Attitude/Elevation" }
+    readonly property var _heading: VeQuickItem { uid: root.serviceUid + "/Attitude/Heading" }
+    readonly property var _speed: VeQuickItem { uid: root.serviceUid + "/Attitude/Speed" }
+    readonly property var _roll: VeQuickItem { uid: root.serviceUid + "/Attitude/Roll" }
+
     // Helper functions
     function formatUptime(seconds) {
         if (seconds === undefined || seconds === null) return "--"
@@ -81,6 +96,27 @@ Page {
 
     function alertStatus(value) {
         return value === 1 ? qsTr("Yes") : qsTr("No")
+    }
+
+    function formatCoordinate(value, isLatitude) {
+        if (value === undefined || value === null || value === 0) return "--"
+        var absVal = Math.abs(value)
+        var degrees = Math.floor(absVal)
+        var minutes = (absVal - degrees) * 60
+        var direction = isLatitude ? (value >= 0 ? "N" : "S") : (value >= 0 ? "E" : "W")
+        return qsTr("%1° %2' %3").arg(degrees).arg(minutes.toFixed(3)).arg(direction)
+    }
+
+    function formatDegrees(value) {
+        if (value === undefined || value === null) return "--"
+        return Number(value).toFixed(1) + "°"
+    }
+
+    function formatSpeed(mps) {
+        if (mps === undefined || mps === null) return "--"
+        // Convert m/s to knots for marine use
+        var knots = mps * 1.94384
+        return Number(knots).toFixed(1) + " kn"
     }
 
     GradientListView {
@@ -155,6 +191,70 @@ Page {
                     if (_fractionObstructed.value === undefined) return "--"
                     return Number(_fractionObstructed.value).toFixed(4)
                 }
+            }
+
+            // GPS Section Header
+            ListItem {
+                text: qsTr("GPS Location")
+            }
+
+            ListTextItem {
+                text: qsTr("GPS Status")
+                secondaryText: _gpsValid.value === 1 ? qsTr("Valid (%1 sats)").arg(_gpsSatellites.value || 0) : qsTr("No Fix")
+                secondaryLabel.color: _gpsValid.value === 1 ? Theme.color_green : Theme.color_font_secondary
+            }
+
+            ListTextItem {
+                text: qsTr("Latitude")
+                secondaryText: formatCoordinate(_gpsLatitude.value, true)
+            }
+
+            ListTextItem {
+                text: qsTr("Longitude")
+                secondaryText: formatCoordinate(_gpsLongitude.value, false)
+            }
+
+            ListTextItem {
+                text: qsTr("Altitude")
+                secondaryText: {
+                    if (_gpsAltitude.value === undefined || _gpsAltitude.value === null) return "--"
+                    return Number(_gpsAltitude.value).toFixed(1) + " m"
+                }
+            }
+
+            // Attitude Section Header
+            ListItem {
+                text: qsTr("Dish Orientation")
+            }
+
+            ListTextItem {
+                text: qsTr("Heading (COG)")
+                secondaryText: formatDegrees(_heading.value)
+            }
+
+            ListTextItem {
+                text: qsTr("Tilt")
+                secondaryText: formatDegrees(_tilt.value)
+            }
+
+            ListTextItem {
+                text: qsTr("Roll")
+                secondaryText: formatDegrees(_roll.value)
+            }
+
+            ListTextItem {
+                text: qsTr("Boresight Azimuth")
+                secondaryText: formatDegrees(_azimuth.value)
+            }
+
+            ListTextItem {
+                text: qsTr("Boresight Elevation")
+                secondaryText: formatDegrees(_elevation.value)
+            }
+
+            ListTextItem {
+                text: qsTr("Speed (SOG)")
+                secondaryText: formatSpeed(_speed.value)
             }
 
             // Device Info Section Header

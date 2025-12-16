@@ -11,6 +11,8 @@ A VenusOS GUI-v2 plugin for monitoring and controlling Starlink satellite dishes
   - Latency (ping)
   - Obstruction status
   - Hardware/Software information
+  - GPS location (latitude, longitude, altitude)
+  - Dish orientation (heading, tilt, roll)
 
 - **Dish Control**:
   - Reboot the dish
@@ -121,20 +123,72 @@ starlink-control/
 
 The service exposes data on `com.victronenergy.starlink`:
 
+### Status & Performance
+
 | Path | Type | Description |
 |------|------|-------------|
-| `/State` | int | Connection state (0=Unknown, 1=Connected, 2=Searching, etc.) |
+| `/Connected` | int | Connection to dish (0=Disconnected, 1=Connected) |
+| `/State` | int | Dish state (0=Unknown, 1=Connected, 2=Booting, 3=Searching, 4=Stowed, etc.) |
+| `/StateText` | string | Human-readable state description |
 | `/Uptime` | int | Dish uptime in seconds |
 | `/DownlinkThroughput` | float | Download speed in Mbps |
 | `/UplinkThroughput` | float | Upload speed in Mbps |
 | `/PopPingLatencyMs` | float | Latency to PoP in milliseconds |
-| `/SignalQuality` | float | Signal quality (0-1) |
+| `/PopPingDropRate` | float | Packet drop rate (0-1) |
 | `/Obstructed` | int | Obstruction status (0=Clear, 1=Obstructed) |
 | `/ObstructedPercent` | float | Percentage of time obstructed |
+| `/FractionObstructed` | float | Fraction of sky obstructed |
+
+### GPS Location
+
+| Path | Type | Description |
+|------|------|-------------|
+| `/Gps/Valid` | int | GPS fix status (0=No fix, 1=Valid) |
+| `/Gps/Satellites` | int | Number of GPS satellites in view |
+| `/Gps/Latitude` | float | Latitude in decimal degrees |
+| `/Gps/Longitude` | float | Longitude in decimal degrees |
+| `/Gps/Altitude` | float | Altitude in meters |
+
+### Attitude / Orientation
+
+| Path | Type | Description |
+|------|------|-------------|
+| `/Attitude/Heading` | float | GPS heading (COG) in degrees |
+| `/Attitude/Tilt` | float | Tilt from vertical in degrees |
+| `/Attitude/Roll` | float | Roll angle in degrees |
+| `/Attitude/Azimuth` | float | Boresight azimuth in degrees |
+| `/Attitude/Elevation` | float | Boresight elevation in degrees |
+| `/Attitude/Speed` | float | GPS speed in m/s |
+
+### Device Information
+
+| Path | Type | Description |
+|------|------|-------------|
+| `/DeviceId` | string | Dish device ID |
 | `/HardwareVersion` | string | Hardware revision |
 | `/SoftwareVersion` | string | Current software version |
-| `/DeviceId` | string | Dish device ID |
+| `/CountryCode` | string | Country code |
+| `/Bootcount` | int | Number of times dish has booted |
+
+### Alerts
+
+| Path | Type | Description |
+|------|------|-------------|
+| `/Alerts/ThermalThrottle` | int | Thermal throttling active (0/1) |
+| `/Alerts/ThermalShutdown` | int | Thermal shutdown active (0/1) |
+| `/Alerts/MotorsStuck` | int | Motors stuck alert (0/1) |
+| `/Alerts/MastNotVertical` | int | Mast not vertical alert (0/1) |
+| `/Alerts/SlowEthernet` | int | Slow ethernet alert (0/1) |
+| `/Alerts/Roaming` | int | Roaming active (0/1) |
+| `/Alerts/IsHeating` | int | Dish heating active (0/1) |
+| `/Alerts/PowerSaveIdle` | int | Power save idle mode (0/1) |
+
+### Commands
+
+| Path | Type | Description |
+|------|------|-------------|
 | `/Command` | int | Write to issue commands (1=Reboot, 2=Stow, 3=Unstow) |
+| `/CommandResult` | int | Result of last command (0=None, 1=Success, 2=Failed) |
 
 ## License
 

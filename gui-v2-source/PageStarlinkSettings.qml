@@ -35,6 +35,13 @@ Page {
     readonly property var _heating: VeQuickItem { uid: root.serviceUid + "/Alerts/IsHeating" }
     readonly property var _roaming: VeQuickItem { uid: root.serviceUid + "/Alerts/Roaming" }
 
+    // GPS data
+    readonly property var _gpsValid: VeQuickItem { uid: root.serviceUid + "/Gps/Valid" }
+    readonly property var _gpsLatitude: VeQuickItem { uid: root.serviceUid + "/Gps/Latitude" }
+    readonly property var _gpsLongitude: VeQuickItem { uid: root.serviceUid + "/Gps/Longitude" }
+    readonly property var _heading: VeQuickItem { uid: root.serviceUid + "/Attitude/Heading" }
+    readonly property var _tilt: VeQuickItem { uid: root.serviceUid + "/Attitude/Tilt" }
+
     // Helper functions
     function formatUptime(seconds) {
         if (seconds === undefined || seconds === null) return "--"
@@ -53,6 +60,17 @@ Page {
     function formatThroughput(mbps) {
         if (mbps === undefined || mbps === null) return "--"
         return Number(mbps).toFixed(1) + " Mbps"
+    }
+
+    function formatPosition(lat, lon) {
+        if (lat === undefined || lon === undefined || lat === 0 || lon === 0) return "--"
+        var latDir = lat >= 0 ? "N" : "S"
+        var lonDir = lon >= 0 ? "E" : "W"
+        return qsTr("%1° %2, %3° %4")
+            .arg(Math.abs(lat).toFixed(4))
+            .arg(latDir)
+            .arg(Math.abs(lon).toFixed(4))
+            .arg(lonDir)
     }
 
     function sendCommand(cmd) {
@@ -113,6 +131,23 @@ Page {
                         return qsTr("Obstructed (%1%)").arg(Number(_obstructedPercent.value || 0).toFixed(1))
                     }
                     return qsTr("Clear (%1%)").arg(Number(_obstructedPercent.value || 0).toFixed(1))
+                }
+            }
+
+            // GPS Position
+            ListNavigationItem {
+                text: qsTr("GPS Position")
+                secondaryText: _gpsValid.value === 1 ? formatPosition(_gpsLatitude.value, _gpsLongitude.value) : qsTr("No GPS Fix")
+                onClicked: Global.pageManager.pushPage("/pages/starlink/PageStarlinkStatus.qml")
+            }
+
+            // Heading and Tilt
+            ListTextItem {
+                text: qsTr("Heading / Tilt")
+                secondaryText: {
+                    var hdg = _heading.value !== undefined ? Number(_heading.value).toFixed(0) + "°" : "--"
+                    var tlt = _tilt.value !== undefined ? Number(_tilt.value).toFixed(1) + "°" : "--"
+                    return qsTr("%1 / %2").arg(hdg).arg(tlt)
                 }
             }
 

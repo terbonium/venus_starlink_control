@@ -130,6 +130,12 @@ class StarlinkGrpcClient:
             alerts = dish_status.alerts if dish_status.HasField('alerts') else None
             obstruction = dish_status.obstruction_stats if dish_status.HasField('obstruction_stats') else None
 
+            # Parse GPS stats
+            gps_stats = dish_status.gps_stats if dish_status.HasField('gps_stats') else None
+
+            # Parse attitude data
+            attitude = dish_status.attitude if dish_status.HasField('attitude') else None
+
             return {
                 # Device info
                 "device_id": device_info.id,
@@ -165,6 +171,21 @@ class StarlinkGrpcClient:
                 "roaming": alerts.roaming if alerts else False,
                 "is_heating": alerts.is_heating if alerts else False,
                 "power_save_idle": alerts.is_power_save_idle if alerts else False,
+
+                # GPS data
+                "gps_valid": gps_stats.gps_valid if gps_stats else False,
+                "gps_sats": gps_stats.gps_sats if gps_stats else 0,
+                "latitude": gps_stats.latitude if gps_stats else 0.0,
+                "longitude": gps_stats.longitude if gps_stats else 0.0,
+                "altitude_m": gps_stats.altitude_m if gps_stats else 0.0,
+
+                # Attitude/orientation data
+                "tilt_angle_deg": dish_status.tilt_angle_deg,
+                "boresight_azimuth_deg": dish_status.boresight_azimuth_deg,
+                "boresight_elevation_deg": dish_status.boresight_elevation_deg,
+                "heading_deg": attitude.heading_deg if attitude else 0.0,
+                "speed_mps": attitude.speed_mps if attitude else 0.0,
+                "roll_deg": attitude.roll_deg if attitude else 0.0,
 
                 # Uptime (bootcount approximation - actual uptime from dish)
                 "uptime_s": 0,  # Will be populated from device telemetry if available
@@ -295,8 +316,18 @@ class MockStarlinkGrpcClient:
 
     def get_status(self) -> Optional[Dict[str, Any]]:
         import random
+        import math
+        import time
 
         state = 4 if self._stowed else 1  # Stowed or Connected
+
+        # Simulate GPS coordinates (example: somewhere in the ocean for a boat)
+        # Add small random variations to simulate movement
+        base_lat = 37.7749 + random.uniform(-0.001, 0.001)
+        base_lon = -122.4194 + random.uniform(-0.001, 0.001)
+
+        # Simulate heading that slowly changes
+        sim_heading = (time.time() / 10) % 360
 
         return {
             "device_id": "ut01000000-00000000-00000000",
@@ -323,6 +354,19 @@ class MockStarlinkGrpcClient:
             "is_heating": False,
             "power_save_idle": False,
             "uptime_s": random.randint(1000, 100000),
+            # GPS data
+            "gps_valid": True,
+            "gps_sats": random.randint(8, 14),
+            "latitude": base_lat,
+            "longitude": base_lon,
+            "altitude_m": random.uniform(0, 50),
+            # Attitude/orientation data
+            "tilt_angle_deg": random.uniform(0, 5),  # Small tilt from vertical
+            "boresight_azimuth_deg": random.uniform(0, 360),
+            "boresight_elevation_deg": random.uniform(25, 45),
+            "heading_deg": sim_heading,
+            "speed_mps": random.uniform(0, 5),  # Simulated slow movement
+            "roll_deg": random.uniform(-3, 3),
         }
 
     def reboot(self) -> bool:
