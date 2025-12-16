@@ -93,13 +93,26 @@ ENV PATH="${QT_HOST_PATH}/bin:${PATH}"
 
 # Tell Emscripten to use system Node.js
 ENV EMSDK_NODE=/usr/bin/node
+ENV EM_NODE_JS=/usr/bin/node
+ENV NODE=/usr/bin/node
 
 # Install Emscripten (version must be compatible with Qt WASM build)
 # Qt 6.5.x was built with emsdk 3.1.37
-RUN git clone https://github.com/emscripten-core/emsdk.git ${EMSDK_PATH} \
-    && cd ${EMSDK_PATH} \
-    && ./emsdk install ${EMSDK_VERSION} --shallow \
-    && ./emsdk activate ${EMSDK_VERSION}
+# We install in stages to work around Docker tar issues with node download
+RUN git clone https://github.com/emscripten-core/emsdk.git ${EMSDK_PATH}
+
+# Create a fake node directory to skip node download, then install emscripten
+RUN cd ${EMSDK_PATH} && \
+    mkdir -p node/22.16.0_64bit/bin && \
+    ln -s /usr/bin/node node/22.16.0_64bit/bin/node && \
+    ln -s /usr/bin/npm node/22.16.0_64bit/bin/npm && \
+    ln -s /usr/bin/npx node/22.16.0_64bit/bin/npx && \
+    echo "22.16.0" > node/22.16.0_64bit/.emsdk_version && \
+    ./emsdk install ${EMSDK_VERSION} && \
+    ./emsdk activate ${EMSDK_VERSION}
+
+# Ensure .emscripten uses system node
+RUN sed -i "s|NODE_JS.*|NODE_JS = '/usr/bin/node'|" ${EMSDK_PATH}/.emscripten || true
 
 # Set Emscripten environment
 ENV EMSDK=${EMSDK_PATH}
