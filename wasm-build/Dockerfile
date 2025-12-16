@@ -16,9 +16,9 @@ LABEL description="Build environment for Venus OS GUI v2 WASM"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Qt and Emscripten versions
-# Using Qt 6.7.2 which is well-supported by aqt
-ENV QT_VERSION=6.7.2
-ENV EMSDK_VERSION=3.1.56
+# Qt 6.5.3 LTS has stable WASM support via aqt
+ENV QT_VERSION=6.5.3
+ENV EMSDK_VERSION=3.1.37
 ENV QT_PATH=/opt/qt
 ENV EMSDK_PATH=/opt/emsdk
 
@@ -70,15 +70,16 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Install aqtinstall for Qt installation
 RUN pip install --no-cache-dir aqtinstall
 
-# List available Qt versions and architectures for debugging (optional)
-# RUN aqt list-qt linux desktop && aqt list-qt linux desktop --arch ${QT_VERSION}
+# Debug: List available architectures for our Qt version
+RUN echo "=== Available architectures for Qt ${QT_VERSION} ===" && \
+    aqt list-qt linux desktop --arch ${QT_VERSION} || true
 
 # Install Qt for desktop (needed for host tools)
-# Note: qtshadertools and qtwebsockets are included in base install for 6.7.x
-RUN aqt install-qt linux desktop ${QT_VERSION} linux_gcc_64 \
+RUN aqt install-qt linux desktop ${QT_VERSION} gcc_64 \
     --outputdir ${QT_PATH}
 
 # Install Qt for WebAssembly (single-threaded)
+# For Qt 6.5.x the architecture is 'wasm_singlethread'
 RUN aqt install-qt linux desktop ${QT_VERSION} wasm_singlethread \
     --outputdir ${QT_PATH}
 
@@ -87,7 +88,8 @@ ENV QT_HOST_PATH=${QT_PATH}/${QT_VERSION}/gcc_64
 ENV QT_WASM_PATH=${QT_PATH}/${QT_VERSION}/wasm_singlethread
 ENV PATH="${QT_HOST_PATH}/bin:${PATH}"
 
-# Install Emscripten
+# Install Emscripten (version must be compatible with Qt WASM build)
+# Qt 6.5.x was built with emsdk 3.1.37
 RUN git clone https://github.com/emscripten-core/emsdk.git ${EMSDK_PATH} \
     && cd ${EMSDK_PATH} \
     && ./emsdk install ${EMSDK_VERSION} \
