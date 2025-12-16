@@ -7,8 +7,15 @@ and send commands (reboot, stow/unstow).
 """
 
 import logging
-import grpc
 from typing import Optional, Dict, Any
+
+# gRPC is optional - only needed for real dish communication
+try:
+    import grpc
+    GRPC_AVAILABLE = True
+except ImportError:
+    grpc = None
+    GRPC_AVAILABLE = False
 
 # These will be generated from proto files
 try:
@@ -63,7 +70,7 @@ class StarlinkGrpcClient:
         """
         self.address = address
         self.timeout = timeout
-        self._channel: Optional[grpc.Channel] = None
+        self._channel = None
         self._stub = None
 
     def connect(self) -> bool:
@@ -73,6 +80,10 @@ class StarlinkGrpcClient:
         Returns:
             True if connection successful, False otherwise
         """
+        if not GRPC_AVAILABLE:
+            logger.error("gRPC module not available - install grpcio")
+            return False
+
         if device_pb2_grpc is None:
             logger.error("gRPC protobuf modules not available")
             return False
