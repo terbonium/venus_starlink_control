@@ -86,15 +86,20 @@ RUN aqt install-qt linux desktop ${QT_VERSION} gcc_64 \
 RUN aqt install-qt linux desktop ${QT_VERSION} wasm_singlethread \
     --outputdir ${QT_PATH}
 
+# Fix permissions on Qt binaries (aqt may not set execute bits)
+RUN chmod -R +x ${QT_PATH}/${QT_VERSION}/gcc_64/bin/ && \
+    chmod -R +x ${QT_PATH}/${QT_VERSION}/wasm_singlethread/bin/
+
 # Set Qt environment variables
 ENV QT_HOST_PATH=${QT_PATH}/${QT_VERSION}/gcc_64
 ENV QT_WASM_PATH=${QT_PATH}/${QT_VERSION}/wasm_singlethread
 ENV PATH="${QT_HOST_PATH}/bin:${PATH}"
 
 # Emscripten is already set up from base image at /emsdk
-# Just ensure environment is properly configured
+# Set all required environment variables for emscripten
 ENV EMSDK=/emsdk
 ENV EM_CONFIG=/emsdk/.emscripten
+ENV PATH="/emsdk:/emsdk/upstream/emscripten:${PATH}"
 
 # Create working directory
 WORKDIR /build
@@ -103,11 +108,13 @@ WORKDIR /build
 RUN git clone --depth 1 https://github.com/victronenergy/gui-v2.git /build/gui-v2
 
 # Build QtMqtt module for WASM (required dependency)
+# Use bash explicitly for emsdk_env.sh which requires bash features
+SHELL ["/bin/bash", "-c"]
 RUN cd /build && \
     git clone --depth 1 --branch v${QT_VERSION} https://github.com/qt/qtmqtt.git && \
     cd qtmqtt && \
     mkdir build-wasm && cd build-wasm && \
-    . ${EMSDK}/emsdk_env.sh && \
+    cd /emsdk && source ./emsdk_env.sh && cd /build/qtmqtt/build-wasm && \
     ${QT_WASM_PATH}/bin/qt-cmake .. \
         -DCMAKE_BUILD_TYPE=MinSizeRel \
         -DQT_HOST_PATH=${QT_HOST_PATH} \
