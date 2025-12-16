@@ -75,8 +75,8 @@ class StarlinkDbusService:
         # Initialize D-Bus main loop
         dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
-        # Get D-Bus connection
-        self._dbusconn = dbus.SystemBus() if not mock else dbus.SessionBus()
+        # Get D-Bus connection (always use system bus on VenusOS)
+        self._dbusconn = dbus.SystemBus()
 
         # Create D-Bus service
         self._dbusservice = VeDbusService(SERVICE_NAME, self._dbusconn)
