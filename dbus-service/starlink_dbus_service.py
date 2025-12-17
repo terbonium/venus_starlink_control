@@ -115,6 +115,10 @@ class StarlinkDbusService:
         self._dbusservice.add_path('/ProductName', 'Starlink')
         self._dbusservice.add_path('/FirmwareVersion', '')
         self._dbusservice.add_path('/HardwareVersion', '')
+        self._dbusservice.add_path('/CustomName', 'Starlink Dish')
+
+        # Device instance - required for VenusOS to show device in list
+        self._dbusservice.add_path('/DeviceInstance', 0)
 
         # Device identification
         self._dbusservice.add_path('/DeviceId', '')
