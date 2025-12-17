@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Starlink Control Plugin Installation Script for VenusOS
+# Starlink D-Bus Service Installation Script for VenusOS
 #
-# This script installs and configures the Starlink control plugin
-# including the D-Bus service and GUI-v2 UI components.
+# This script installs the Starlink D-Bus service which exposes
+# dish status and control (reboot, stow, ice mode) on the system bus.
 #
 
 set -e
@@ -14,9 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Configuration
 APP_NAME="starlink-control"
 APP_DIR="${SCRIPT_DIR}"
-ENABLED_DIR="/data/apps/enabled"
 SERVICE_DIR="/service/starlink-dbus"
-WEB_SERVICE_DIR="/service/starlink-web"
 
 # Colors for output
 RED='\033[0;31m'
@@ -97,67 +95,6 @@ generate_protos() {
     echo_info "Protobuf files generated"
 }
 
-# Compile GUI-v2 plugin
-compile_gui_plugin() {
-    echo_info "Compiling GUI-v2 plugin..."
-
-    COMPILER="/opt/victronenergy/gui-v2/gui-v2-plugin-compiler.py"
-
-    # Check if lupdate is available (required by the compiler)
-    if ! command -v lupdate &> /dev/null; then
-        echo_warn "lupdate not found, creating plugin.json manually"
-        create_plugin_json_manually
-        return 0
-    fi
-
-    if [ ! -f "${COMPILER}" ]; then
-        echo_warn "GUI-v2 plugin compiler not found at ${COMPILER}"
-        echo_warn "Creating plugin.json manually"
-        create_plugin_json_manually
-        return 0
-    fi
-
-    cd "${APP_DIR}"
-
-    # Compile the settings page for the Integrations menu
-    # Format: --settings "QmlFile.qml:MenuLabel"
-    python3 "${COMPILER}" \
-        --name "${APP_NAME}" \
-        --min-required-version "v3.70" \
-        --settings "PageStarlinkSettings.qml:Starlink" || {
-            echo_warn "Compiler failed, creating plugin.json manually"
-            create_plugin_json_manually
-            return 0
-        }
-
-    echo_info "GUI plugin compiled successfully"
-}
-
-# Create plugin.json manually when compiler is not available
-create_plugin_json_manually() {
-    echo_info "Creating plugin.json manually..."
-
-    mkdir -p "${APP_DIR}/gui-v2"
-
-    cat > "${APP_DIR}/gui-v2/plugin.json" << 'EOF'
-{
-    "name": "starlink-control",
-    "minRequiredVersion": "v3.70",
-    "settings": [
-        {
-            "qml": "PageStarlinkSettings.qml",
-            "label": "Starlink"
-        }
-    ]
-}
-EOF
-
-    # Copy QML files to gui-v2 directory (some setups need them there)
-    cp "${APP_DIR}/gui-v2-source/"*.qml "${APP_DIR}/gui-v2/" 2>/dev/null || true
-
-    echo_info "plugin.json created at ${APP_DIR}/gui-v2/plugin.json"
-}
-
 # Setup daemontools service
 setup_service() {
     echo_info "Setting up D-Bus service..."
@@ -184,17 +121,6 @@ EOF
     echo_info "D-Bus service configured"
 }
 
-# Enable the app
-enable_app() {
-    echo_info "Enabling app..."
-
-    # Create enabled symlink
-    mkdir -p "${ENABLED_DIR}"
-    ln -sf "${APP_DIR}" "${ENABLED_DIR}/${APP_NAME}"
-
-    echo_info "App enabled"
-}
-
 # Create default configuration
 create_config() {
     echo_info "Creating default configuration..."
@@ -217,40 +143,11 @@ DEBUG=0
 
 # Enable mock mode for testing without dish (0 or 1)
 MOCK_MODE=0
-
-# Web dashboard port
-WEB_PORT=8088
 EOF
         echo_info "Default configuration created at ${CONFIG_DIR}/starlink.conf"
     else
         echo_info "Configuration file already exists, skipping"
     fi
-}
-
-# Setup web dashboard service
-setup_web_service() {
-    echo_info "Setting up web dashboard service..."
-
-    # Create service directory
-    mkdir -p "${WEB_SERVICE_DIR}"
-
-    # Create run script symlink
-    ln -sf "${APP_DIR}/web-dashboard/run" "${WEB_SERVICE_DIR}/run"
-
-    # Make run script executable
-    chmod +x "${APP_DIR}/web-dashboard/run"
-
-    # Create log directory
-    mkdir -p "${WEB_SERVICE_DIR}/log"
-
-    # Create log run script
-    cat > "${WEB_SERVICE_DIR}/log/run" << 'EOF'
-#!/bin/sh
-exec svlogd -tt ./main
-EOF
-    chmod +x "${WEB_SERVICE_DIR}/log/run"
-
-    echo_info "Web dashboard service configured"
 }
 
 # Start the service
@@ -268,34 +165,8 @@ start_service() {
         else
             echo_warn "D-Bus service may not have started. Check logs at ${SERVICE_DIR}/log/main/"
         fi
-
-        # Start web service
-        echo_info "Starting web dashboard service..."
-        svc -u "${WEB_SERVICE_DIR}" 2>/dev/null || true
-        sleep 2
-
-        if svstat "${WEB_SERVICE_DIR}" 2>/dev/null | grep -q "up"; then
-            echo_info "Web dashboard started successfully"
-        else
-            echo_warn "Web dashboard may not have started. Check logs at ${WEB_SERVICE_DIR}/log/main/"
-        fi
     else
         echo_warn "svc command not found, please start the services manually"
-    fi
-}
-
-# Install GUI v1 pages (classic interface)
-install_gui_v1() {
-    echo_info "Checking for GUI v1 (classic interface)..."
-
-    if [ -d "/opt/victronenergy/gui/qml" ]; then
-        echo_info "GUI v1 found, installing pages..."
-        chmod +x "${APP_DIR}/gui-v1/install-gui-v1.sh"
-        "${APP_DIR}/gui-v1/install-gui-v1.sh" || {
-            echo_warn "GUI v1 installation had issues, continuing..."
-        }
-    else
-        echo_info "GUI v1 not found (normal for newer devices)"
     fi
 }
 
@@ -303,7 +174,7 @@ install_gui_v1() {
 main() {
     echo ""
     echo "=========================================="
-    echo "  Starlink Control Plugin Installer"
+    echo "  Starlink D-Bus Service Installer"
     echo "=========================================="
     echo ""
 
@@ -311,11 +182,7 @@ main() {
     install_dependencies
     generate_protos
     create_config
-    compile_gui_plugin
-    install_gui_v1
     setup_service
-    setup_web_service
-    enable_app
     start_service
 
     echo ""
@@ -323,31 +190,42 @@ main() {
     echo "  Installation Complete!"
     echo "=========================================="
     echo ""
-    echo "The Starlink plugin has been installed."
+    echo "The Starlink D-Bus service has been installed."
     echo ""
     echo "Configuration file: ${APP_DIR}/config/starlink.conf"
-    echo "D-Bus service logs: ${SERVICE_DIR}/log/main/"
-    echo "Web dashboard logs: ${WEB_SERVICE_DIR}/log/main/"
+    echo "Service logs: ${SERVICE_DIR}/log/main/"
     echo ""
-    echo "Access the web dashboard at:"
-    echo "  http://<device-ip>:8088"
+    echo "D-Bus Service: com.victronenergy.starlink"
     echo ""
-    echo "Local display:"
-    echo "  GUI v1 (classic): Settings -> Starlink"
-    echo "  GUI v2 (new):     Settings -> Integrations -> Starlink"
+    echo "D-Bus Paths (readable):"
+    echo "  /Connected           - Connection status (0/1)"
+    echo "  /State               - Dish state"
+    echo "  /StateText           - Dish state as text"
+    echo "  /DownlinkThroughput  - Download speed (Mbps)"
+    echo "  /UplinkThroughput    - Upload speed (Mbps)"
+    echo "  /PopPingLatencyMs    - Latency (ms)"
+    echo "  /Obstructed          - Obstruction status (0/1)"
+    echo "  /Gps/Latitude        - GPS latitude"
+    echo "  /Gps/Longitude       - GPS longitude"
+    echo "  /Alerts/*            - Various alert flags"
+    echo ""
+    echo "D-Bus Control (write to /Command):"
+    echo "  1 = Reboot dish"
+    echo "  2 = Stow dish"
+    echo "  3 = Unstow dish"
+    echo "  4 = Ice/Snow melt OFF"
+    echo "  5 = Ice/Snow melt ON (force)"
+    echo "  6 = Ice/Snow melt AUTO"
     echo ""
     echo "Service management:"
-    echo "  D-Bus service:"
-    echo "    Start:   svc -u ${SERVICE_DIR}"
-    echo "    Stop:    svc -d ${SERVICE_DIR}"
-    echo "    Restart: svc -t ${SERVICE_DIR}"
-    echo "    Status:  svstat ${SERVICE_DIR}"
+    echo "  Start:   svc -u ${SERVICE_DIR}"
+    echo "  Stop:    svc -d ${SERVICE_DIR}"
+    echo "  Restart: svc -t ${SERVICE_DIR}"
+    echo "  Status:  svstat ${SERVICE_DIR}"
     echo ""
-    echo "  Web dashboard:"
-    echo "    Start:   svc -u ${WEB_SERVICE_DIR}"
-    echo "    Stop:    svc -d ${WEB_SERVICE_DIR}"
-    echo "    Restart: svc -t ${WEB_SERVICE_DIR}"
-    echo "    Status:  svstat ${WEB_SERVICE_DIR}"
+    echo "Example D-Bus commands:"
+    echo "  dbus -y com.victronenergy.starlink /Connected GetValue"
+    echo "  dbus -y com.victronenergy.starlink /Command SetValue %1  # Reboot"
     echo ""
 }
 

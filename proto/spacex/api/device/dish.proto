@@ -208,3 +208,23 @@ message DishGetObstructionMapResponse {
     uint32 num_cols = 2;
     repeated float snr = 3;
 }
+
+// Snow melt mode
+enum SnowMeltMode {
+    SNOW_MELT_MODE_OFF = 0;
+    SNOW_MELT_MODE_FORCE = 1;
+    SNOW_MELT_MODE_AUTO = 2;
+}
+
+// Dish configuration
+message DishConfig {
+    SnowMeltMode snow_melt_mode = 1;
+}
+
+// Dish set configuration request
+message DishSetConfigRequest {
+    DishConfig dish_config = 1;
+}
+
+// Dish set configuration response
+message DishSetConfigResponse {}

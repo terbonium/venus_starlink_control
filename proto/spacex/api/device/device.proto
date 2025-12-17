@@ -23,6 +23,7 @@ message Request {
         DishStowRequest dish_stow = 8;
         DishGetStatusRequest dish_get_status = 1005;
         DishGetObstructionMapRequest dish_get_obstruction_map = 1015;
+        DishSetConfigRequest dish_set_config = 1016;
     }
 }
 
@@ -38,6 +39,7 @@ message Response {
         DishStowResponse dish_stow = 1008;
         DishGetStatusResponse dish_get_status = 1005;
         DishGetObstructionMapResponse dish_get_obstruction_map = 1015;
+        DishSetConfigResponse dish_set_config = 1016;
     }
 }
 

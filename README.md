@@ -1,241 +1,185 @@
-# Venus Starlink Control
+# Starlink D-Bus Service for VenusOS
 
-A VenusOS plugin for monitoring and controlling Starlink satellite dishes. Supports GUI v1 (classic), GUI v2 (new), and web browser access.
+A D-Bus service that exposes Starlink dish status and control on VenusOS systems (Cerbo GX, Venus GX, etc.).
 
 ## Features
 
-- **Web Dashboard**: Browser-accessible dashboard at `http://<device-ip>:8088`
-  - Works from any device on the network (phone, tablet, computer)
-  - Auto-updating display (2-second refresh)
-  - Mobile-friendly responsive design
-
-- **GUI v1 Support** (Classic interface): Settings -> Starlink
-  - Works with older VenusOS devices and CCGX
-  - Integrated into Settings menu
-  - Survives firmware updates via rc.local
-
-- **GUI v2 Support** (New interface): Settings -> Integrations -> Starlink
-  - For devices with local display running GUI v2
-  - Plugin-based architecture
-
-- **Status Monitoring**: View real-time Starlink dish statistics including:
-  - Connection state and uptime
-  - Signal quality (SNR)
-  - Download/Upload throughput
-  - Latency (ping)
-  - Obstruction status
-  - Hardware/Software information
-  - GPS location (latitude, longitude, altitude)
-  - Dish orientation (heading, tilt, roll)
-
-- **Dish Control**:
-  - Reboot the dish
-  - Stow/Unstow the dish
-
-## Architecture
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                       VenusOS GX Device                          │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌─────────────────┐       ┌──────────────────────────┐         │
-│  │   GUI-v2 Plugin │◄─────►│  D-Bus (com.victronenergy│         │
-│  │   (QML Pages)   │       │  .starlink)              │         │
-│  │ [Local Display] │       └────────────┬─────────────┘         │
-│  └─────────────────┘                    │                       │
-│                                         │                       │
-│  ┌─────────────────┐       ┌────────────▼─────────────┐         │
-│  │  Web Dashboard  │◄─────►│  starlink-dbus-service   │         │
-│  │  (port 8088)    │       │  (Python gRPC Client)    │         │
-│  │ [Browser Access]│       └────────────┬─────────────┘         │
-│  └─────────────────┘                    │                       │
-│                                         │                       │
-└─────────────────────────────────────────┼───────────────────────┘
-                                          │ gRPC (port 9200)
-                              ┌───────────▼───────────┐
-                              │   Starlink Dish       │
-                              │   (192.168.100.1)     │
-                              └───────────────────────┘
-```
-
-## Requirements
-
-- Venus OS v3.70~45 or newer
-- Python 3 with:
-  - `dbus-python`
-  - `grpcio`
-  - `grpcio-tools`
-- Network access to Starlink dish (typically 192.168.100.1:9200)
+- **Status Monitoring**: Real-time dish status including throughput, latency, GPS, orientation
+- **Dish Control**: Reboot, stow/unstow, and snow melt (ice) mode control
+- **D-Bus Integration**: Native VenusOS integration via system D-Bus
 
 ## Installation
 
-1. Copy the app to the GX device:
+1. Copy the project to your VenusOS device:
    ```bash
-   scp -r . root@<gx-ip>:/data/apps/available/starlink-control/
+   scp -r venus_starlink_control root@<device-ip>:/data/
    ```
 
-2. Run the install script on the GX device:
+2. Run the installer:
    ```bash
-   ssh root@<gx-ip>
-   cd /data/apps/available/starlink-control
+   ssh root@<device-ip>
+   cd /data/venus_starlink_control
    ./install.sh
    ```
 
-3. The install script will:
-   - Install Python dependencies
-   - Generate protobuf files
-   - Compile the GUI-v2 plugin
-   - Enable the app
-   - Start the D-Bus service
+## D-Bus Interface
 
-## Manual Setup
-
-### Generate Protobuf Files
-```bash
-cd /data/apps/available/starlink-control
-python3 -m grpc_tools.protoc -I./proto --python_out=./dbus-service --grpc_python_out=./dbus-service ./proto/*.proto
+### Service Name
+```
+com.victronenergy.starlink
 ```
 
-### Compile GUI Plugin
+### Status Paths (Read-Only)
+
+| Path | Description |
+|------|-------------|
+| `/Connected` | Connection status (0=disconnected, 1=connected) |
+| `/State` | Dish state code |
+| `/StateText` | Dish state as text |
+| `/DownlinkThroughput` | Download speed (Mbps) |
+| `/UplinkThroughput` | Upload speed (Mbps) |
+| `/PopPingLatencyMs` | Latency (ms) |
+| `/PopPingDropRate` | Packet drop rate |
+| `/Obstructed` | Currently obstructed (0/1) |
+| `/ObstructedPercent` | Obstruction percentage |
+| `/Uptime` | Dish uptime (seconds) |
+| `/Gps/Valid` | GPS fix valid (0/1) |
+| `/Gps/Latitude` | GPS latitude |
+| `/Gps/Longitude` | GPS longitude |
+| `/Gps/Altitude` | GPS altitude (m) |
+| `/Attitude/Heading` | GPS heading (degrees) |
+| `/Attitude/Tilt` | Dish tilt angle (degrees) |
+| `/Alerts/IsHeating` | Snow melt active (0/1) |
+| `/Alerts/ThermalThrottle` | Thermal throttling (0/1) |
+
+### Control Path (Write)
+
+Write values to `/Command` to control the dish:
+
+| Value | Action |
+|-------|--------|
+| 1 | Reboot dish |
+| 2 | Stow dish |
+| 3 | Unstow dish |
+| 4 | Snow melt OFF |
+| 5 | Snow melt ON (force) |
+| 6 | Snow melt AUTO |
+
+### Command Result
+
+Read `/CommandResult` after sending a command:
+- 0 = No command sent
+- 1 = Success
+- 2 = Failed
+
+## Usage Examples
+
+### Read dish status
 ```bash
-python3 /opt/victronenergy/gui-v2/gui-v2-plugin-compiler.py \
-  --name starlink-control \
-  --min-required-version v3.70 \
-  --settings PageStarlinkSettings.qml 'Starlink'
+# Get connection status
+dbus -y com.victronenergy.starlink /Connected GetValue
+
+# Get current throughput
+dbus -y com.victronenergy.starlink /DownlinkThroughput GetValue
+dbus -y com.victronenergy.starlink /UplinkThroughput GetValue
+
+# Get GPS position
+dbus -y com.victronenergy.starlink /Gps/Latitude GetValue
+dbus -y com.victronenergy.starlink /Gps/Longitude GetValue
 ```
 
-### Enable the App
+### Control the dish
 ```bash
-ln -sf /data/apps/available/starlink-control /data/apps/enabled/starlink-control
+# Reboot dish
+dbus -y com.victronenergy.starlink /Command SetValue %1
+
+# Stow dish
+dbus -y com.victronenergy.starlink /Command SetValue %2
+
+# Unstow dish
+dbus -y com.victronenergy.starlink /Command SetValue %3
+
+# Turn on snow melt (ice mode)
+dbus -y com.victronenergy.starlink /Command SetValue %5
+
+# Turn off snow melt
+dbus -y com.victronenergy.starlink /Command SetValue %4
 ```
 
-### Start the Service
+## Configuration
+
+Edit `/data/venus_starlink_control/config/starlink.conf`:
+
 ```bash
+# Dish address (IP:port)
+DISH_ADDRESS="192.168.100.1:9200"
+
+# Status update interval in milliseconds
+UPDATE_INTERVAL=5000
+
+# Enable debug logging (0 or 1)
+DEBUG=0
+
+# Enable mock mode for testing without dish (0 or 1)
+MOCK_MODE=0
+```
+
+## Service Management
+
+```bash
+# Start service
 svc -u /service/starlink-dbus
+
+# Stop service
+svc -d /service/starlink-dbus
+
+# Restart service
+svc -t /service/starlink-dbus
+
+# Check status
+svstat /service/starlink-dbus
+
+# View logs
+cat /service/starlink-dbus/log/main/current
 ```
 
 ## File Structure
 
 ```
-starlink-control/
+venus_starlink_control/
 ├── README.md
-├── install.sh                    # Installation script
+├── install.sh              # Installation script
+├── uninstall.sh            # Uninstallation script
+├── config/
+│   └── starlink.conf       # Configuration file
 ├── proto/
 │   └── spacex/api/device/
-│       ├── common.proto          # Common Starlink protobuf definitions
-│       ├── device.proto          # Device API definitions
-│       └── dish.proto            # Dish-specific definitions
-├── dbus-service/
-│   ├── starlink_dbus_service.py  # Main D-Bus service
-│   ├── starlink_grpc_client.py   # gRPC client for Starlink
-│   └── run                       # daemontools run script
-├── web-dashboard/
-│   ├── starlink_web_server.py    # Web server for browser access
-│   ├── index.html                # Dashboard HTML/CSS/JS
-│   └── run                       # daemontools run script
-├── gui-v1/
-│   ├── PageStarlink.qml          # GUI v1 settings page
-│   └── install-gui-v1.sh         # GUI v1 installer
-├── gui-v2/
-│   └── plugin.json               # Generated plugin manifest
-└── gui-v2-source/
-    ├── PageStarlinkSettings.qml  # GUI v2 settings page
-    └── PageStarlinkStatus.qml    # GUI v2 detailed status page
+│       ├── common.proto    # Common protobuf definitions
+│       ├── device.proto    # Device API definitions
+│       └── dish.proto      # Dish-specific definitions
+└── dbus-service/
+    ├── starlink_dbus_service.py  # Main D-Bus service
+    ├── starlink_grpc_client.py   # gRPC client for Starlink
+    └── run                       # daemontools run script
 ```
 
-## D-Bus Interface
+## Uninstallation
 
-The service exposes data on `com.victronenergy.starlink`:
-
-### Status & Performance
-
-| Path | Type | Description |
-|------|------|-------------|
-| `/Connected` | int | Connection to dish (0=Disconnected, 1=Connected) |
-| `/State` | int | Dish state (0=Unknown, 1=Connected, 2=Booting, 3=Searching, 4=Stowed, etc.) |
-| `/StateText` | string | Human-readable state description |
-| `/Uptime` | int | Dish uptime in seconds |
-| `/DownlinkThroughput` | float | Download speed in Mbps |
-| `/UplinkThroughput` | float | Upload speed in Mbps |
-| `/PopPingLatencyMs` | float | Latency to PoP in milliseconds |
-| `/PopPingDropRate` | float | Packet drop rate (0-1) |
-| `/Obstructed` | int | Obstruction status (0=Clear, 1=Obstructed) |
-| `/ObstructedPercent` | float | Percentage of time obstructed |
-| `/FractionObstructed` | float | Fraction of sky obstructed |
-
-### GPS Location
-
-| Path | Type | Description |
-|------|------|-------------|
-| `/Gps/Valid` | int | GPS fix status (0=No fix, 1=Valid) |
-| `/Gps/Satellites` | int | Number of GPS satellites in view |
-| `/Gps/Latitude` | float | Latitude in decimal degrees |
-| `/Gps/Longitude` | float | Longitude in decimal degrees |
-| `/Gps/Altitude` | float | Altitude in meters |
-
-### Attitude / Orientation
-
-| Path | Type | Description |
-|------|------|-------------|
-| `/Attitude/Heading` | float | GPS heading (COG) in degrees |
-| `/Attitude/Tilt` | float | Tilt from vertical in degrees |
-| `/Attitude/Roll` | float | Roll angle in degrees |
-| `/Attitude/Azimuth` | float | Boresight azimuth in degrees |
-| `/Attitude/Elevation` | float | Boresight elevation in degrees |
-| `/Attitude/Speed` | float | GPS speed in m/s |
-
-### Device Information
-
-| Path | Type | Description |
-|------|------|-------------|
-| `/DeviceId` | string | Dish device ID |
-| `/HardwareVersion` | string | Hardware revision |
-| `/SoftwareVersion` | string | Current software version |
-| `/CountryCode` | string | Country code |
-| `/Bootcount` | int | Number of times dish has booted |
-
-### Alerts
-
-| Path | Type | Description |
-|------|------|-------------|
-| `/Alerts/ThermalThrottle` | int | Thermal throttling active (0/1) |
-| `/Alerts/ThermalShutdown` | int | Thermal shutdown active (0/1) |
-| `/Alerts/MotorsStuck` | int | Motors stuck alert (0/1) |
-| `/Alerts/MastNotVertical` | int | Mast not vertical alert (0/1) |
-| `/Alerts/SlowEthernet` | int | Slow ethernet alert (0/1) |
-| `/Alerts/Roaming` | int | Roaming active (0/1) |
-| `/Alerts/IsHeating` | int | Dish heating active (0/1) |
-| `/Alerts/PowerSaveIdle` | int | Power save idle mode (0/1) |
-
-### Commands
-
-| Path | Type | Description |
-|------|------|-------------|
-| `/Command` | int | Write to issue commands (1=Reboot, 2=Stow, 3=Unstow) |
-| `/CommandResult` | int | Result of last command (0=None, 1=Success, 2=Failed) |
-
-## Web Dashboard API
-
-The web dashboard exposes a REST API for integration:
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Dashboard HTML page |
-| `/api/status` | GET | JSON object with all Starlink status data |
-| `/api/command` | POST | Send command to dish (JSON body: `{"command": 1\|2\|3}`) |
-
-Command values: 1=Reboot, 2=Stow, 3=Unstow
-
-Example:
 ```bash
-# Get status
-curl http://<device-ip>:8088/api/status
-
-# Stow the dish
-curl -X POST -H "Content-Type: application/json" \
-  -d '{"command": 2}' http://<device-ip>:8088/api/command
+./uninstall.sh
 ```
+
+## Requirements
+
+- VenusOS 2.80 or later
+- Network connection to Starlink dish (default: 192.168.100.1:9200)
+- Python 3 with grpcio
+
+## Network Setup
+
+The Starlink dish must be reachable from your VenusOS device. Typical setup:
+- Starlink dish: 192.168.100.1
+- VenusOS device connected to Starlink network or routed appropriately
 
 ## License
 

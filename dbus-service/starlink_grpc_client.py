@@ -3,7 +3,7 @@
 Starlink gRPC Client
 
 Communicates with Starlink dish via gRPC to retrieve status
-and send commands (reboot, stow/unstow).
+and send commands (reboot, stow/unstow, snow melt mode).
 """
 
 import logging
@@ -32,6 +32,11 @@ logger = logging.getLogger(__name__)
 
 # Default Starlink dish address
 DEFAULT_DISH_ADDRESS = "192.168.100.1:9200"
+
+# Snow melt mode values
+SNOW_MELT_OFF = 0
+SNOW_MELT_FORCE = 1
+SNOW_MELT_AUTO = 2
 
 # State mapping from protobuf enum to human-readable
 STATE_MAP = {
@@ -305,6 +310,44 @@ class StarlinkGrpcClient:
             logger.error(f"Error sending unstow: {e}")
             return False
 
+    def set_snow_melt_mode(self, mode: int) -> bool:
+        """
+        Set the snow melt (ice/heating) mode.
+
+        Args:
+            mode: Snow melt mode (0=OFF, 1=FORCE/ON, 2=AUTO)
+
+        Returns:
+            True if command successful, False otherwise
+        """
+        if not self._stub:
+            if not self.connect():
+                return False
+
+        try:
+            # Create config with snow melt mode
+            config = dish_pb2.DishConfig(snow_melt_mode=mode)
+            request = device_pb2.Request(
+                dish_set_config=dish_pb2.DishSetConfigRequest(dish_config=config)
+            )
+
+            response = self._stub.Handle(request, timeout=self.timeout)
+
+            if response.status == device_pb2.STATUS_OK:
+                mode_names = {0: "OFF", 1: "FORCE", 2: "AUTO"}
+                logger.info(f"Snow melt mode set to {mode_names.get(mode, mode)}")
+                return True
+            else:
+                logger.error(f"Set snow melt mode failed: {response.status}")
+                return False
+
+        except grpc.RpcError as e:
+            logger.error(f"gRPC error setting snow melt mode: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Error setting snow melt mode: {e}")
+            return False
+
 
 # For testing without actual dish connection
 class MockStarlinkGrpcClient:
@@ -315,6 +358,7 @@ class MockStarlinkGrpcClient:
         self.timeout = timeout
         self._connected = False
         self._stowed = False
+        self._snow_melt_mode = SNOW_MELT_OFF
 
     def connect(self) -> bool:
         self._connected = True
@@ -392,6 +436,12 @@ class MockStarlinkGrpcClient:
     def unstow(self) -> bool:
         self._stowed = False
         logger.info("[MOCK] Unstow command sent")
+        return True
+
+    def set_snow_melt_mode(self, mode: int) -> bool:
+        self._snow_melt_mode = mode
+        mode_names = {0: "OFF", 1: "FORCE", 2: "AUTO"}
+        logger.info(f"[MOCK] Snow melt mode set to {mode_names.get(mode, mode)}")
         return True
 
 

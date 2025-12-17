@@ -27,7 +27,10 @@ except ImportError as e:
     print("This service is designed to run on VenusOS")
     sys.exit(1)
 
-from starlink_grpc_client import create_client, DEFAULT_DISH_ADDRESS
+from starlink_grpc_client import (
+    create_client, DEFAULT_DISH_ADDRESS,
+    SNOW_MELT_OFF, SNOW_MELT_FORCE, SNOW_MELT_AUTO
+)
 
 # Logging setup
 logging.basicConfig(
@@ -47,6 +50,9 @@ CMD_NONE = 0
 CMD_REBOOT = 1
 CMD_STOW = 2
 CMD_UNSTOW = 3
+CMD_ICE_OFF = 4      # Snow melt off
+CMD_ICE_ON = 5       # Snow melt force on
+CMD_ICE_AUTO = 6     # Snow melt auto mode
 
 
 class StarlinkDbusService:
@@ -210,6 +216,12 @@ class StarlinkDbusService:
             result = self.client.stow()
         elif cmd == CMD_UNSTOW:
             result = self.client.unstow()
+        elif cmd == CMD_ICE_OFF:
+            result = self.client.set_snow_melt_mode(SNOW_MELT_OFF)
+        elif cmd == CMD_ICE_ON:
+            result = self.client.set_snow_melt_mode(SNOW_MELT_FORCE)
+        elif cmd == CMD_ICE_AUTO:
+            result = self.client.set_snow_melt_mode(SNOW_MELT_AUTO)
         elif cmd == CMD_NONE:
             # Reset command - always succeeds
             result = True
